@@ -645,11 +645,9 @@ function renderDashboard(){
     const gross=dv*(d.comm_rate/100)*((d.split_split||100)/100);
     return s+gross*(1-((d.partner_fee||0)/100));
   },0);
-  document.getElementById('dash-total').textContent=deals.length;
   document.getElementById('dash-val').textContent='$'+Math.round(totalVal).toLocaleString();
   document.getElementById('dash-active').textContent=activeDeals.length;
   document.getElementById('dash-gross').textContent=fmt(grossComm);
-  document.getElementById('dash-mygross').textContent=fmt(myGross);
   document.getElementById('dash-comm').textContent=fmt(myNet);
   // Sales pipeline
   const salesEl=document.getElementById('dash-sales');
