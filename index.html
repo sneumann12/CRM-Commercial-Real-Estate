@@ -840,9 +840,9 @@ function renderPipeline(){
       const isLease=d.deal_type==='Leasing';
       const sf=d.size_sf?d.size_sf.toLocaleString()+' SF':'';
       const valLabel=isLease?'$/SF/yr':'Sale price';
-      const valDisplay=d.value?'$'+Number(d.value).toLocaleString()+(isLease?'/SF':''):'';
+      const valDisplay=d.value?'$'+Number(d.value).toLocaleString()+(isLease?'/SF/mo':''):'';
       const calcDisplay=d.value&&d.size_sf
-        ?(isLease?fmt(d.value*d.size_sf)+'/yr':('$'+(d.value/d.size_sf).toFixed(0)+'/SF'))
+        ?(isLease?fmt(d.value*d.size_sf*12)+'/yr':('$'+(d.value/d.size_sf).toFixed(0)+'/SF'))
         :'';
       const card=document.createElement('div');card.className='deal-card';
       card.innerHTML=`<div class="deal-name">${d.name}</div>
@@ -1065,7 +1065,7 @@ function updateStageOptions(){
   if(stages.includes(cur))sel.value=cur;
   // Update value label
   const lbl=document.getElementById('deal-value-label');
-  if(lbl) lbl.textContent=pipeline==='Sales'?'Sale price ($)':'Rent ($/SF/yr)';
+  if(lbl) lbl.textContent=pipeline==='Sales'?'Sale price ($)':'Rent ($/SF/month)';
   updateDealCalc();
 }
 
@@ -1081,10 +1081,10 @@ function updateDealCalc(){
       row.style.display='block';
       row.innerHTML=`<span style="color:var(--text3)">Price per SF:</span> <strong style="color:var(--gold)">$${ppsf}/SF</strong>`;
     } else {
-      const annual=val*sf;
-      const monthly=annual/12;
+      const annual=val*sf*12;
+      const monthly=val*sf;
       row.style.display='block';
-      row.innerHTML=`<span style="color:var(--text3)">Annual rent:</span> <strong style="color:var(--gold)">${fmt(annual)}</strong> &nbsp;·&nbsp; <span style="color:var(--text3)">Monthly:</span> <strong style="color:var(--gold)">${fmt(monthly)}</strong>`;
+      row.innerHTML=`<span style="color:var(--text3)">Monthly rent:</span> <strong style="color:var(--gold)">${fmt(monthly)}</strong> &nbsp;·&nbsp; <span style="color:var(--text3)">Annual:</span> <strong style="color:var(--gold)">${fmt(annual)}</strong>`;
     }
   } else {
     row.style.display='none';
