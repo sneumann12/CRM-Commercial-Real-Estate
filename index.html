@@ -846,7 +846,7 @@ function renderPipeline(){
         :'';
       const card=document.createElement('div');card.className='deal-card';
       card.innerHTML=`<div class="deal-name">${d.name}</div>
-        <div class="deal-meta">${d.type||''}${cl?' · '+cl.name:''}</div>
+        <div class="deal-meta">${cl?'<span style="font-weight:600">'+cl.name+'</span>':''}</div>
         ${sf?'<div style="font-size:11px;color:var(--text3);margin-top:4px">'+sf+'</div>':''}
         ${valDisplay?'<div class="deal-val">'+valDisplay+'</div>':''}
         ${calcDisplay?'<div style="font-size:11px;color:var(--gold);font-weight:600;margin-top:1px">'+calcDisplay+'</div>':''}
