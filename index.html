@@ -288,12 +288,13 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
         <select id="cl-type"><option>Buyer</option><option>Seller</option><option>Tenant</option><option>Landlord</option><option>Investor</option><option>Lender</option><option>Broker</option><option>Other</option></select>
       </div>
     </div>
-    <div class="field"><label>Primary contact name</label><input type="text" id="cl-contact"></div>
-    <div class="grid2">
-      <div class="field"><label>Email</label><input type="email" id="cl-email"></div>
-      <div class="field"><label>Phone</label><input type="tel" id="cl-phone"></div>
-    </div>
     <div class="field"><label>Notes</label><textarea id="cl-notes"></textarea></div>
+    <!-- Contacts linked to this client -->
+    <div id="cl-contacts-section" style="display:none;margin-top:4px">
+      <div style="font-size:12px;font-weight:500;color:#666;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Contacts at this company</div>
+      <div id="cl-contact-list" style="margin-bottom:8px"></div>
+      <button class="btn btn-sm" onclick="addContactToClient()">+ Add contact</button>
+    </div>
     <div class="row">
       <button class="btn btn-danger" id="client-delete-btn" onclick="deleteClient()" style="display:none;margin-right:auto">Delete</button>
       <button class="btn" onclick="closeModal('client-modal')">Cancel</button>
@@ -317,6 +318,7 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
       <div class="field"><label>Company</label><input type="text" id="ct-company"></div>
       <div class="field"><label>Title</label><input type="text" id="ct-title" placeholder="e.g. VP Acquisitions"></div>
     </div>
+    <div class="field"><label>Linked client</label><select id="ct-client-id"><option value="">— none —</option></select></div>
     <div class="grid2">
       <div class="field"><label>Email</label><input type="email" id="ct-email"></div>
       <div class="field"><label>Phone</label><input type="tel" id="ct-phone"></div>
@@ -497,10 +499,19 @@ function renderPipeline(){
 function renderClients(){
   const q=(document.getElementById('client-search').value||'').toLowerCase();
   const list=document.getElementById('client-list');
-  const filtered=clients.filter(c=>!q||c.name.toLowerCase().includes(q)||(c.cl_contact||'').toLowerCase().includes(q));
+  const filtered=clients.filter(c=>!q||c.name.toLowerCase().includes(q));
   if(!filtered.length){list.innerHTML='<div class="empty">No clients yet.</div>';return;}
   list.innerHTML=filtered.map(cl=>{
     const clDeals=deals.filter(d=>d.client_id===cl.id);
+    const clContacts=contacts.filter(c=>c.client_id===cl.id);
+    const contactsHtml=clContacts.length?clContacts.map(c=>`
+      <div class="client-deal-row" onclick="event.stopPropagation();openContactModal('${c.id}')">
+        <div>
+          <div style="font-size:13px;font-weight:500">${c.name}</div>
+          <div style="font-size:11px;color:#888">${[c.title,c.email,c.phone].filter(Boolean).join(' · ')}</div>
+        </div>
+        <span class="type-pill">${c.type||''}</span>
+      </div>`).join(''):'<div style="font-size:12px;color:#aaa;padding:2px 0">No contacts yet</div>';
     const dealsHtml=clDeals.length?clDeals.map(d=>{
       const isLease=(d.deal_type||'Sales')==='Leasing';
       return `<div class="client-deal-row" onclick="event.stopPropagation();openDealModal('${d.id}')">
@@ -510,14 +521,22 @@ function renderClients(){
           <span class="stage-pill ${isLease?'stage-pill-lease':''}">${d.stage}</span>
         </div>
       </div>`;
-    }).join(''):'<div style="font-size:12px;color:#aaa;padding:4px 0">No deals yet</div>';
+    }).join(''):'<div style="font-size:12px;color:#aaa;padding:2px 0">No deals yet</div>';
     return `<div class="client-card" onclick="openClientModal('${cl.id}')">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div><div class="client-name">${cl.name}</div>
-        <div class="client-meta">${cl.type||''}${cl.cl_contact?' · '+cl.cl_contact:''}${cl.email?' · '+cl.email:''}</div></div>
-        <span class="badge">${clDeals.length} deal${clDeals.length!==1?'s':''}</span>
+        <div class="client-meta">${cl.type||''}</div></div>
+        <div style="display:flex;gap:6px">
+          <span class="badge">${clContacts.length} contact${clContacts.length!==1?'s':''}</span>
+          <span class="badge">${clDeals.length} deal${clDeals.length!==1?'s':''}</span>
+        </div>
       </div>
-      <div class="client-deals">${dealsHtml}</div>
+      <div class="client-deals">
+        <div style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;margin-top:8px">Contacts</div>
+        ${contactsHtml}
+        <div style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;margin-top:10px">Deals</div>
+        ${dealsHtml}
+      </div>
     </div>`;
   }).join('');
 }
@@ -532,16 +551,19 @@ function renderContacts(){
   });
   const list=document.getElementById('contact-list');
   if(!filtered.length){list.innerHTML='<div class="empty">No contacts yet.</div>';return;}
-  list.innerHTML=filtered.map(c=>`
+  list.innerHTML=filtered.map(c=>{
+    const linkedClient=c.client_id?clients.find(cl=>cl.id===c.client_id):null;
+    return `
     <div class="contact-row" onclick="openContactModal('${c.id}')">
       <div class="avatar">${c.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
       <div class="contact-info">
         <div class="contact-name">${c.name}${c.title?'<span style="font-size:11px;font-weight:400;color:#888;margin-left:6px">'+c.title+'</span>':''}</div>
-        <div class="contact-detail">${[c.company,c.email,c.phone].filter(Boolean).join(' · ')}</div>
+        <div class="contact-detail">${[c.company||( linkedClient?linkedClient.name:''),c.email,c.phone].filter(Boolean).join(' · ')}</div>
+        ${linkedClient?'<div style="margin-top:3px;font-size:11px;color:#0066cc">'+linkedClient.name+'</div>':''}
         ${c.submarket?'<div style="margin-top:3px"><span class="submarket-pill">'+c.submarket+'</span></div>':''}
       </div>
       <span class="type-pill">${c.type||''}</span>
-    </div>`).join('');
+    </div>`}).join('');
 }
 
 function renderLeads(){
@@ -748,17 +770,34 @@ function openClientModal(id){
     document.getElementById('client-id').value=c.id;
     document.getElementById('cl-name').value=c.name;
     document.getElementById('cl-type').value=c.type||'Buyer';
-    document.getElementById('cl-contact').value=c.cl_contact||'';
-    document.getElementById('cl-email').value=c.email||'';
-    document.getElementById('cl-phone').value=c.phone||'';
     document.getElementById('cl-notes').value=c.notes||'';
     document.getElementById('client-delete-btn').style.display='inline-block';
+    // Show contacts linked to this client
+    const clContacts=contacts.filter(ct=>ct.client_id===id);
+    document.getElementById('cl-contacts-section').style.display='block';
+    document.getElementById('cl-contact-list').innerHTML=clContacts.length
+      ?clContacts.map(ct=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:#f9f9f8;border-radius:6px;margin-bottom:4px;font-size:13px">
+          <div><strong>${ct.name}</strong>${ct.title?' · '+ct.title:''}<br><span style="font-size:11px;color:#888">${[ct.email,ct.phone].filter(Boolean).join(' · ')}</span></div>
+          <button class="btn btn-sm" onclick="event.stopPropagation();closeModal('client-modal');openContactModal('${ct.id}')">Edit</button>
+        </div>`).join('')
+      :'<div style="font-size:12px;color:#aaa;padding:4px 0">No contacts linked yet.</div>';
   }else{
     document.getElementById('client-modal-title').textContent='Add client';
-    ['client-id','cl-name','cl-contact','cl-email','cl-phone','cl-notes'].forEach(f=>document.getElementById(f).value='');
+    ['client-id','cl-name','cl-notes'].forEach(f=>document.getElementById(f).value='');
+    document.getElementById('cl-type').value='Buyer';
     document.getElementById('client-delete-btn').style.display='none';
+    document.getElementById('cl-contacts-section').style.display='none';
   }
   document.getElementById('client-modal').classList.add('open');
+}
+function addContactToClient(){
+  const clientId=document.getElementById('client-id').value;
+  const clientName=document.getElementById('cl-name').value;
+  closeModal('client-modal');
+  openContactModal();
+  // Pre-select the client
+  document.getElementById('ct-client-id').value=clientId;
+  document.getElementById('ct-company').value=clientName;
 }
 // Auto-sync any person to contacts table
 async function syncToContacts(name, email, phone, type, company, source){
@@ -787,13 +826,10 @@ async function syncToContacts(name, email, phone, type, company, source){
 
 async function saveClient(){
   const id=document.getElementById('client-id').value;
-  const obj={id:id||uid(),name:document.getElementById('cl-name').value,type:document.getElementById('cl-type').value,cl_contact:document.getElementById('cl-contact').value,email:document.getElementById('cl-email').value,phone:document.getElementById('cl-phone').value,notes:document.getElementById('cl-notes').value};
+  const obj={id:id||uid(),name:document.getElementById('cl-name').value,type:document.getElementById('cl-type').value,cl_contact:'',email:'',phone:'',notes:document.getElementById('cl-notes').value};
   if(!obj.name){alert('Client name is required.');return;}
   if(id){await sb.from('clients').update(obj).eq('id',id);clients=clients.map(c=>c.id===id?obj:c);}
   else{await sb.from('clients').insert(obj);clients.push(obj);}
-  // Sync primary contact name to contacts
-  const contactName = obj.cl_contact || obj.name;
-  await syncToContacts(contactName, obj.email, obj.phone, obj.type, obj.name, 'Clients');
   closeModal('client-modal');renderClients();showToast('Client saved.');
 }
 async function deleteClient(){
@@ -805,6 +841,9 @@ async function deleteClient(){
 }
 
 function openContactModal(id){
+  // Populate client dropdown
+  const clientSel=document.getElementById('ct-client-id');
+  clientSel.innerHTML='<option value="">— none —</option>'+clients.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
   if(id){
     const c=contacts.find(x=>x.id===id);
     document.getElementById('contact-modal-title').textContent='Edit contact';
@@ -813,6 +852,7 @@ function openContactModal(id){
     document.getElementById('ct-type').value=c.type||'Other';
     document.getElementById('ct-company').value=c.company||'';
     document.getElementById('ct-title').value=c.title||'';
+    document.getElementById('ct-client-id').value=c.client_id||'';
     document.getElementById('ct-email').value=c.email||'';
     document.getElementById('ct-phone').value=c.phone||'';
     document.getElementById('ct-submarket').value=c.submarket||'';
@@ -820,19 +860,19 @@ function openContactModal(id){
     document.getElementById('contact-delete-btn').style.display='inline-block';
   }else{
     document.getElementById('contact-modal-title').textContent='Add contact';
-    ['ct-id','ct-name','ct-company','ct-title','ct-email','ct-phone','ct-notes'].forEach(f=>document.getElementById(f).value='');
-    document.getElementById('ct-submarket').value='';
+    ['ct-id','ct-name','ct-company','ct-title','ct-email','ct-phone','ct-notes','ct-submarket'].forEach(f=>document.getElementById(f).value='');
+    document.getElementById('ct-client-id').value='';
     document.getElementById('contact-delete-btn').style.display='none';
   }
   document.getElementById('contact-modal').classList.add('open');
 }
 async function saveContact(){
   const id=document.getElementById('ct-id').value;
-  const obj={id:id||uid(),name:document.getElementById('ct-name').value,type:document.getElementById('ct-type').value,company:document.getElementById('ct-company').value,title:document.getElementById('ct-title').value,email:document.getElementById('ct-email').value,phone:document.getElementById('ct-phone').value,submarket:document.getElementById('ct-submarket').value,notes:document.getElementById('ct-notes').value};
+  const obj={id:id||uid(),name:document.getElementById('ct-name').value,type:document.getElementById('ct-type').value,company:document.getElementById('ct-company').value,title:document.getElementById('ct-title').value,client_id:document.getElementById('ct-client-id').value||null,email:document.getElementById('ct-email').value,phone:document.getElementById('ct-phone').value,submarket:document.getElementById('ct-submarket').value,notes:document.getElementById('ct-notes').value};
   if(!obj.name){alert('Name is required.');return;}
   if(id){await sb.from('contacts').update(obj).eq('id',id);contacts=contacts.map(c=>c.id===id?obj:c);}
   else{await sb.from('contacts').insert(obj);contacts.push(obj);}
-  closeModal('contact-modal');renderContacts();showToast('Contact saved.');
+  closeModal('contact-modal');renderContacts();if(document.getElementById('view-clients').classList.contains('active'))renderClients();showToast('Contact saved.');
 }
 async function deleteContact(){
   if(!confirm('Delete this contact?'))return;
