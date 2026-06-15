@@ -185,14 +185,12 @@ tr:hover td{background:var(--accent-light);cursor:pointer}
     <!-- LEFT: Stats + Pipeline summary -->
     <div>
       <div class="section-label" style="font-size:11px">Pipeline snapshot</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">
-        <div class="stat"><div class="stat-label">Total deals</div><div class="stat-val" id="dash-total">—</div></div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:8px">
         <div class="stat" style="border-top-color:var(--gold)"><div class="stat-label">Pipeline value</div><div class="stat-val gold-val" id="dash-val">—</div></div>
         <div class="stat"><div class="stat-label">Active deals</div><div class="stat-val" id="dash-active">—</div></div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1rem">
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:1rem">
         <div class="stat" style="border-top-color:var(--gold)"><div class="stat-label">Gross commission</div><div class="stat-val gold-val" id="dash-gross">—</div></div>
-        <div class="stat" style="border-top-color:var(--gold)"><div class="stat-label">My gross (co-broke)</div><div class="stat-val gold-val" id="dash-mygross">—</div></div>
         <div class="stat" style="border-top-color:var(--gold)"><div class="stat-label">My net (after splits)</div><div class="stat-val gold-val" id="dash-comm">—</div></div>
       </div>
       <div class="section-label" style="font-size:11px">Sales pipeline</div>
@@ -378,7 +376,7 @@ tr:hover td{background:var(--accent-light);cursor:pointer}
       <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Commission</div>
       <div class="grid2">
         <div class="field"><label>Commission rate (%)</label><input type="number" id="deal-comm-rate" placeholder="e.g. 3" step="0.1" oninput="updateDealCalc()"></div>
-        <div class="field"><label>Co-broke split (% my side)</label><input type="number" id="deal-cobroke" placeholder="e.g. 50" step="1" oninput="updateDealCalc()"></div>
+        <div class="field"><label>Split (% my side)</label><input type="number" id="deal-split" placeholder="e.g. 50" step="1" oninput="updateDealCalc()"></div>
       </div>
       <div class="field"><label>Partner / referral fee (% of my gross)</label><input type="number" id="deal-partner-fee" placeholder="e.g. 25" step="1" oninput="updateDealCalc()"></div>
       <div id="deal-comm-calc" style="background:var(--gold-light);border:1px solid var(--gold);border-radius:var(--radius-sm);padding:10px;font-size:13px;display:none"></div>
@@ -524,7 +522,7 @@ tr:hover td{background:var(--accent-light);cursor:pointer}
       <div class="field"><label>Commission rate (%)</label><input type="number" id="comm-rate" step="0.1" oninput="calcComm()"></div>
     </div>
     <div class="grid2">
-      <div class="field"><label>Co-broke split (%)</label><input type="number" id="comm-split" step="1" oninput="calcComm()"></div>
+      <div class="field"><label>Split split (%)</label><input type="number" id="comm-split" step="1" oninput="calcComm()"></div>
       <div class="field"><label>Close / execution date</label><input type="date" id="comm-date"></div>
     </div>
     <div style="background:var(--surface2);border-radius:8px;padding:10px;margin-bottom:12px;font-size:13px" id="comm-calc">Enter value and rate to calculate.</div>
@@ -640,11 +638,11 @@ function renderDashboard(){
   },0);
   const myGross=deals.filter(d=>d.comm_rate).reduce((s,d)=>{
     const dv=d.deal_type==='Leasing'?(d.value||0)*(d.size_sf||0)*12:(d.value||0);
-    return s+dv*(d.comm_rate/100)*((d.cobroke_split||100)/100);
+    return s+dv*(d.comm_rate/100)*((d.split_split||100)/100);
   },0);
   const myNet=deals.filter(d=>d.comm_rate).reduce((s,d)=>{
     const dv=d.deal_type==='Leasing'?(d.value||0)*(d.size_sf||0)*12:(d.value||0);
-    const gross=dv*(d.comm_rate/100)*((d.cobroke_split||100)/100);
+    const gross=dv*(d.comm_rate/100)*((d.split_split||100)/100);
     return s+gross*(1-((d.partner_fee||0)/100));
   },0);
   document.getElementById('dash-total').textContent=deals.length;
@@ -876,7 +874,7 @@ function renderPipeline(){
         ?(isLease?fmt(d.value*d.size_sf*12)+'/yr':('$'+(d.value/d.size_sf).toFixed(0)+'/SF'))
         :'';
       const myNet=d.comm_rate&&dealVal
-        ?dealVal*(d.comm_rate/100)*((d.cobroke_split||100)/100)*(1-((d.partner_fee||0)/100))
+        ?dealVal*(d.comm_rate/100)*((d.split_split||100)/100)*(1-((d.partner_fee||0)/100))
         :0;
       const card=document.createElement('div');card.className='deal-card';
       card.innerHTML=`<div class="deal-name" style="text-decoration:underline">${d.name}</div>
@@ -1109,7 +1107,7 @@ function updateDealCalc(){
   const val=+document.getElementById('deal-value').value||0;
   const sf=+document.getElementById('deal-sf').value||0;
   const commRate=+document.getElementById('deal-comm-rate').value||0;
-  const cobroke=+document.getElementById('deal-cobroke').value||100;
+  const split=+document.getElementById('deal-split').value||100;
   const partnerFee=+document.getElementById('deal-partner-fee').value||0;
   const row=document.getElementById('deal-calc-row');
   const commRow=document.getElementById('deal-comm-calc');
@@ -1133,13 +1131,13 @@ function updateDealCalc(){
   if(commRate&&(val||(sf&&val))){
     const dealVal=pipeline==='Sales'?val:(val*sf*12);
     const grossComm=dealVal*commRate/100;
-    const myGross=grossComm*(cobroke/100);
+    const myGross=grossComm*(split/100);
     const myNet=myGross*(1-(partnerFee/100));
     commRow.style.display='block';
     commRow.innerHTML=`
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">
         <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Gross comm</div><div style="font-size:14px;font-weight:700;color:var(--gold)">${fmt(grossComm)}</div></div>
-        <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">My gross (${cobroke}%)</div><div style="font-size:14px;font-weight:700;color:var(--gold)">${fmt(myGross)}</div></div>
+        <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">My gross (${split}%)</div><div style="font-size:14px;font-weight:700;color:var(--gold)">${fmt(myGross)}</div></div>
         <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">My net${partnerFee?` (-${partnerFee}%)`:''}</div><div style="font-size:14px;font-weight:700;color:var(--gold)">${fmt(myNet)}</div></div>
       </div>`;
   } else { commRow.style.display='none'; }
@@ -1184,7 +1182,7 @@ function openDealModal(id){
     document.getElementById('deal-value').value=d.value||'';
     document.getElementById('deal-sf').value=d.size_sf||'';
     document.getElementById('deal-comm-rate').value=d.comm_rate||'';
-    document.getElementById('deal-cobroke').value=d.cobroke_split||'';
+    document.getElementById('deal-split').value=d.split_split||'';
     document.getElementById('deal-partner-fee').value=d.partner_fee||'';
     document.getElementById('deal-followup').value=d.follow_up_date||'';
     document.getElementById('deal-notes').value=d.notes||'';
@@ -1193,7 +1191,7 @@ function openDealModal(id){
     renderDealNotes(id);
   }else{
     document.getElementById('deal-modal-title').textContent='Add deal';
-    ['deal-id','deal-name','deal-value','deal-sf','deal-comm-rate','deal-cobroke','deal-partner-fee','deal-followup','deal-notes','new-note-text'].forEach(f=>document.getElementById(f).value='');
+    ['deal-id','deal-name','deal-value','deal-sf','deal-comm-rate','deal-split','deal-partner-fee','deal-followup','deal-notes','new-note-text'].forEach(f=>document.getElementById(f).value='');
     document.getElementById('deal-pipeline').value=activePipeline==='sales'?'Sales':'Leasing';
     updateStageOptions();
     document.getElementById('deal-delete-btn').style.display='none';
@@ -1204,7 +1202,7 @@ function openDealModal(id){
 async function saveDeal(){
   const id=document.getElementById('deal-id').value;
   const followUp=document.getElementById('deal-followup').value;
-  const obj={id:id||uid(),name:document.getElementById('deal-name').value,deal_type:document.getElementById('deal-pipeline').value,stage:document.getElementById('deal-stage').value,type:document.getElementById('deal-type').value,client_id:document.getElementById('deal-client').value||null,value:+document.getElementById('deal-value').value||null,size_sf:+document.getElementById('deal-sf').value||null,comm_rate:+document.getElementById('deal-comm-rate').value||null,cobroke_split:+document.getElementById('deal-cobroke').value||100,partner_fee:+document.getElementById('deal-partner-fee').value||0,follow_up_date:followUp||null,notes:document.getElementById('deal-notes').value};
+  const obj={id:id||uid(),name:document.getElementById('deal-name').value,deal_type:document.getElementById('deal-pipeline').value,stage:document.getElementById('deal-stage').value,type:document.getElementById('deal-type').value,client_id:document.getElementById('deal-client').value||null,value:+document.getElementById('deal-value').value||null,size_sf:+document.getElementById('deal-sf').value||null,comm_rate:+document.getElementById('deal-comm-rate').value||null,split_split:+document.getElementById('deal-split').value||100,partner_fee:+document.getElementById('deal-partner-fee').value||0,follow_up_date:followUp||null,notes:document.getElementById('deal-notes').value};
   if(!obj.name){alert('Deal name is required.');return;}
   if(id){await sb.from('deals').update(obj).eq('id',id);deals=deals.map(d=>d.id===id?obj:d);}
   else{await sb.from('deals').insert(obj);deals.push(obj);activeDealId=obj.id;}
@@ -1217,7 +1215,7 @@ async function saveDeal(){
       deal_id:obj.id,
       sale:dealVal,
       rate:obj.comm_rate,
-      split:obj.cobroke_split||100,
+      split:obj.split_split||100,
       partner_fee:obj.partner_fee||0,
       status:'Expected',
       close_date:null,
