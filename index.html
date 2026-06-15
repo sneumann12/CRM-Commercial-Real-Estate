@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRE CRM</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f3;color:#1a1a1a;min-height:100vh}
+.topbar{background:#fff;border-bottom:1px solid #e5e5e3;padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;height:52px;position:sticky;top:0;z-index:50}
+.logo{font-size:15px;font-weight:500}
+.tab-bar{display:flex;gap:2px}
+.tab{padding:8px 14px;font-size:13px;cursor:pointer;border:none;background:none;color:#666;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab.active{color:#1a1a1a;font-weight:500;border-bottom:2px solid #1a1a1a}
+.main{padding:1.5rem;max-width:1200px;margin:0 auto}
+.view{display:none}.view.active{display:block}
+.stage-cols{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;align-items:start}
+.stage-col{background:#fff;border:1px solid #e5e5e3;border-radius:10px;padding:10px}
+.stage-label{font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+.deal-card{background:#f9f9f8;border:1px solid #e5e5e3;border-radius:8px;padding:10px;margin-bottom:8px;cursor:pointer}
+.deal-card:hover{border-color:#ccc;background:#fff}
+.deal-name{font-size:13px;font-weight:500}
+.deal-meta{font-size:11px;color:#888;margin-top:3px}
+.deal-val{font-size:12px;color:#0066cc;margin-top:4px;font-weight:500}
+.btn{padding:7px 14px;font-size:13px;cursor:pointer;border:1px solid #d5d5d3;border-radius:8px;background:#fff;color:#1a1a1a}
+.btn:hover{background:#f5f5f3}
+.btn-primary{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.btn-primary:hover{background:#333}
+.btn-danger{color:#cc0000;border-color:#ffcccc}
+.btn-danger:hover{background:#fff5f5}
+.btn-sm{padding:5px 10px;font-size:12px}
+input,select,textarea{width:100%;padding:7px 10px;font-size:13px;border:1px solid #d5d5d3;border-radius:8px;background:#fff;color:#1a1a1a;font-family:inherit}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
+textarea{resize:vertical;min-height:70px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:12px;color:#666;margin-bottom:4px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:flex-start;justify-content:center;padding-top:60px}
+.modal-bg.open{display:flex}
+.modal{background:#fff;border:1px solid #e5e5e3;border-radius:12px;padding:1.25rem;width:440px;max-width:95vw;max-height:80vh;overflow-y:auto}
+.modal-title{font-size:16px;font-weight:500;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center}
+.close-btn{background:none;border:none;cursor:pointer;font-size:20px;color:#888;line-height:1}
+.row{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:1rem}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.contact-row{background:#fff;border:1px solid #e5e5e3;border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:8px}
+.contact-row:hover{border-color:#ccc}
+.avatar{width:36px;height:36px;border-radius:50%;background:#e8f0fe;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:#0066cc;flex-shrink:0}
+.contact-info{flex:1;min-width:0}
+.contact-name{font-size:14px;font-weight:500}
+.contact-detail{font-size:12px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.contact-tag{font-size:11px;padding:2px 8px;border-radius:6px;background:#e8f0fe;color:#0066cc;flex-shrink:0}
+.note-card{background:#fff;border:1px solid #e5e5e3;border-radius:8px;padding:12px 14px;margin-bottom:8px}
+.note-meta{font-size:11px;color:#888;margin-bottom:4px}
+.note-text{font-size:13px;line-height:1.5}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1rem}
+.stat{background:#fff;border:1px solid #e5e5e3;border-radius:8px;padding:10px}
+.stat-label{font-size:11px;color:#888;margin-bottom:3px}
+.stat-val{font-size:18px;font-weight:500}
+.search-row{display:flex;gap:8px;margin-bottom:1rem}
+.search-row input{flex:1}
+.empty{text-align:center;padding:2rem;color:#888;font-size:13px}
+.badge{display:inline-block;font-size:11px;padding:2px 6px;border-radius:6px;margin-left:4px;background:#f5f5f3;color:#888}
+.tag-pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;margin:2px;cursor:pointer;border:1px solid #d5d5d3;color:#666}
+.tag-pill.sel{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.comm-row{background:#fff;border:1px solid #e5e5e3;border-radius:8px;padding:12px 14px;margin-bottom:8px;cursor:pointer}
+.comm-row:hover{border-color:#ccc}
+.status-Expected{background:#fff8e6;color:#996600;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:500}
+.status-Received{background:#e6f4ea;color:#1a7340;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:500}
+.status-Partial{background:#e8f0fe;color:#0066cc;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:500}
+.comm-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1rem}
+.email-preview{background:#f9f9f8;border:1px solid #e5e5e3;border-radius:8px;padding:12px;font-size:13px;line-height:1.6;white-space:pre-wrap;min-height:80px}
+.export-card{background:#fff;border:1px solid #e5e5e3;border-radius:10px;padding:1rem;margin-bottom:12px}
+.export-card h3{font-size:14px;font-weight:500;margin-bottom:4px}
+.export-card p{font-size:12px;color:#888;margin-bottom:10px}
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:#1a1a1a;color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;z-index:200;opacity:0;transition:opacity .2s}
+.toast.show{opacity:1}
+.loading{text-align:center;padding:3rem;color:#888;font-size:13px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">CRE CRM</div>
+  <div class="tab-bar">
+    <button class="tab active" onclick="switchTab('pipeline',this)">Pipeline</button>
+    <button class="tab" onclick="switchTab('contacts',this)">Contacts</button>
+    <button class="tab" onclick="switchTab('notes',this)">Notes</button>
+    <button class="tab" onclick="switchTab('email',this)">Email blast</button>
+    <button class="tab" onclick="switchTab('commissions',this)">Commissions</button>
+    <button class="tab" onclick="switchTab('export',this)">Export</button>
+  </div>
+  <div id="sync-status" style="font-size:12px;color:#888">Connecting...</div>
+</div>
+
+<div class="main">
+
+<!-- PIPELINE -->
+<div class="view active" id="view-pipeline">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;gap:8px">
+    <div class="stats" style="flex:1;margin-bottom:0">
+      <div class="stat"><div class="stat-label">Total deals</div><div class="stat-val" id="stat-total">—</div></div>
+      <div class="stat"><div class="stat-label">Pipeline value</div><div class="stat-val" id="stat-val">—</div></div>
+      <div class="stat"><div class="stat-label">Active</div><div class="stat-val" id="stat-active">—</div></div>
+      <div class="stat"><div class="stat-label">Closed</div><div class="stat-val" id="stat-closed">—</div></div>
+    </div>
+    <button class="btn btn-primary" onclick="openDealModal()">+ Add deal</button>
+  </div>
+  <div class="stage-cols" id="pipeline-board"><div class="loading">Loading deals...</div></div>
+</div>
+
+<!-- CONTACTS -->
+<div class="view" id="view-contacts">
+  <div class="search-row">
+    <input type="text" placeholder="Search contacts..." id="contact-search" oninput="renderContacts()">
+    <button class="btn btn-primary" onclick="openContactModal()">+ Add contact</button>
+  </div>
+  <div id="contact-list"><div class="loading">Loading contacts...</div></div>
+</div>
+
+<!-- NOTES -->
+<div class="view" id="view-notes">
+  <div class="search-row">
+    <select id="note-filter" onchange="renderNotes()" style="width:auto;flex:1"><option value="">All notes</option></select>
+    <button class="btn btn-primary" onclick="openNoteModal()">+ Add note</button>
+  </div>
+  <div id="note-list"></div>
+</div>
+
+<!-- EMAIL -->
+<div class="view" id="view-email">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+    <div>
+      <div class="field"><label>Subject</label><input type="text" id="email-subject" placeholder="e.g. Q3 deal update"></div>
+      <div class="field"><label>Body</label><textarea id="email-body" style="min-height:120px" placeholder="Write your message..."></textarea></div>
+      <div class="field"><label>Recipients</label><div id="email-recipients" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px"></div></div>
+      <div style="display:flex;gap:8px;margin-top:.5rem">
+        <button class="btn" onclick="previewEmail()">Preview</button>
+        <button class="btn btn-primary" onclick="sendBlast()">Send blast</button>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:12px;color:#888;margin-bottom:6px">Preview</div>
+      <div class="email-preview" id="email-preview-box">Preview appears here...</div>
+      <div style="font-size:12px;color:#888;margin-top:1rem;margin-bottom:6px">Sent blasts</div>
+      <div id="sent-list" style="font-size:13px;color:#888">None yet.</div>
+    </div>
+  </div>
+</div>
+
+<!-- COMMISSIONS -->
+<div class="view" id="view-commissions">
+  <div class="comm-stats" id="comm-stats"></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+    <select id="comm-filter" onchange="renderCommissions()" style="width:auto;font-size:13px">
+      <option value="">All statuses</option>
+      <option value="Expected">Expected</option>
+      <option value="Partial">Partial</option>
+      <option value="Received">Received</option>
+    </select>
+    <button class="btn btn-primary" onclick="openCommModal()">+ Add commission</button>
+  </div>
+  <div id="comm-list"></div>
+</div>
+
+<!-- EXPORT -->
+<div class="view" id="view-export">
+  <div style="max-width:480px">
+    <div class="export-card"><h3>Deals</h3><p>Name, type, stage, value, contact, notes</p><button class="btn btn-primary btn-sm" onclick="exportDeals()">Download deals.csv</button></div>
+    <div class="export-card"><h3>Contacts</h3><p>Name, role, company, email, phone</p><button class="btn btn-primary btn-sm" onclick="exportContacts()">Download contacts.csv</button></div>
+    <div class="export-card"><h3>Commissions</h3><p>Deal, rate, gross, net, status, close date</p><button class="btn btn-primary btn-sm" onclick="exportCommissions()">Download commissions.csv</button></div>
+  </div>
+</div>
+
+</div>
+
+<!-- MODALS -->
+<div class="modal-bg" id="deal-modal">
+  <div class="modal">
+    <div class="modal-title"><span id="deal-modal-title">Add deal</span><button class="close-btn" onclick="closeModal('deal-modal')">×</button></div>
+    <input type="hidden" id="deal-id">
+    <div class="field"><label>Property / deal name</label><input type="text" id="deal-name" placeholder="e.g. 1234 Pacific Ave – Manhattan Beach"></div>
+    <div class="grid2">
+      <div class="field"><label>Property type</label>
+        <select id="deal-type"><option>Retail</option><option>Office</option><option>Industrial</option><option>Multifamily</option><option>Mixed-use</option><option>Land</option></select>
+      </div>
+      <div class="field"><label>Stage</label>
+        <select id="deal-stage"><option>Prospect</option><option>LOI</option><option>Due diligence</option><option>In escrow</option><option>Closed</option></select>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Deal value ($)</label><input type="number" id="deal-value" placeholder="0"></div>
+      <div class="field"><label>Contact</label><select id="deal-contact"><option value="">— none —</option></select></div>
+    </div>
+    <div class="field"><label>Notes</label><textarea id="deal-notes" placeholder="Key details, financing, zoning..."></textarea></div>
+    <div class="row">
+      <button class="btn btn-danger" id="deal-delete-btn" onclick="deleteDeal()" style="display:none;margin-right:auto">Delete</button>
+      <button class="btn" onclick="closeModal('deal-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveDeal()">Save deal</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="contact-modal">
+  <div class="modal">
+    <div class="modal-title"><span id="contact-modal-title">Add contact</span><button class="close-btn" onclick="closeModal('contact-modal')">×</button></div>
+    <input type="hidden" id="contact-id">
+    <div class="grid2">
+      <div class="field"><label>Name</label><input type="text" id="c-name" placeholder="Full name"></div>
+      <div class="field"><label>Role</label>
+        <select id="c-role"><option>Buyer</option><option>Seller</option><option>Broker</option><option>Lender</option><option>Tenant</option><option>Investor</option><option>Attorney</option><option>Other</option></select>
+      </div>
+    </div>
+    <div class="field"><label>Company</label><input type="text" id="c-company"></div>
+    <div class="grid2">
+      <div class="field"><label>Email</label><input type="email" id="c-email"></div>
+      <div class="field"><label>Phone</label><input type="tel" id="c-phone"></div>
+    </div>
+    <div class="row">
+      <button class="btn btn-danger" id="contact-delete-btn" onclick="deleteContact()" style="display:none;margin-right:auto">Delete</button>
+      <button class="btn" onclick="closeModal('contact-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveContact()">Save contact</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="note-modal">
+  <div class="modal">
+    <div class="modal-title"><span>Add note</span><button class="close-btn" onclick="closeModal('note-modal')">×</button></div>
+    <div class="field"><label>Linked deal</label><select id="note-deal"><option value="">— general —</option></select></div>
+    <div class="field"><label>Note</label><textarea id="note-text" style="min-height:120px" placeholder="Call summary, site visit, diligence item..."></textarea></div>
+    <div class="row">
+      <button class="btn" onclick="closeModal('note-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveNote()">Save note</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="comm-modal">
+  <div class="modal">
+    <div class="modal-title"><span id="comm-modal-title">Add commission</span><button class="close-btn" onclick="closeModal('comm-modal')">×</button></div>
+    <input type="hidden" id="comm-id">
+    <div class="field"><label>Deal</label><select id="comm-deal"><option value="">— select deal —</option></select></div>
+    <div class="grid2">
+      <div class="field"><label>Sale price ($)</label><input type="number" id="comm-sale" oninput="calcComm()"></div>
+      <div class="field"><label>Commission rate (%)</label><input type="number" id="comm-rate" step="0.1" oninput="calcComm()"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Co-broke split (%)</label><input type="number" id="comm-split" step="1" oninput="calcComm()"></div>
+      <div class="field"><label>Close date</label><input type="date" id="comm-date"></div>
+    </div>
+    <div style="background:#f9f9f8;border-radius:8px;padding:10px;margin-bottom:12px;font-size:13px" id="comm-calc">Enter sale price and rate to calculate.</div>
+    <div class="field"><label>Status</label>
+      <select id="comm-status"><option>Expected</option><option>Partial</option><option>Received</option></select>
+    </div>
+    <div class="field"><label>Notes</label><input type="text" id="comm-notes" placeholder="e.g. Co-broke with CBRE, awaiting escrow"></div>
+    <div class="row">
+      <button class="btn btn-danger" id="comm-delete-btn" onclick="deleteComm()" style="display:none;margin-right:auto">Delete</button>
+      <button class="btn" onclick="closeModal('comm-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveComm()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://tymyhsidyetcfevjskxm.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5bXloc2lkeWV0Y2Zldmpza3htIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1Mzg2MTIsImV4cCI6MjA5NzExNDYxMn0.6WppQ7mJlWXNS9C8MZVEgVG_CA4he1G86egTrsyDcAI';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const STAGES = ['Prospect','LOI','Due diligence','In escrow','Closed'];
+let deals=[], contacts=[], notes=[], commissions=[], sentBlasts=[];
+let selectedRecipients = new Set();
+
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2); }
+function fmt(n){ return '$'+Math.round(n).toLocaleString(); }
+function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
+function setSync(msg){ document.getElementById('sync-status').textContent=msg; }
+
+async function loadAll(){
+  setSync('Syncing...');
+  try {
+    const [d,c,n,k] = await Promise.all([
+      sb.from('deals').select('*'),
+      sb.from('contacts').select('*'),
+      sb.from('deal_notes').select('*'),
+      sb.from('commissions').select('*'),
+    ]);
+    deals = d.data||[]; contacts = c.data||[]; notes = n.data||[]; commissions = k.data||[];
+    setSync('Synced ✓');
+    renderPipeline();
+  } catch(e){ setSync('Connection error'); console.error(e); }
+}
+
+function switchTab(t,el){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('view-'+t).classList.add('active');
+  if(t==='pipeline') renderPipeline();
+  if(t==='contacts') renderContacts();
+  if(t==='notes') renderNotes();
+  if(t==='email') renderEmail();
+  if(t==='commissions') renderCommissions();
+}
+
+function renderPipeline(){
+  const board=document.getElementById('pipeline-board');
+  const totalVal=deals.reduce((s,d)=>s+(+d.value||0),0);
+  document.getElementById('stat-total').textContent=deals.length;
+  document.getElementById('stat-val').textContent='$'+Math.round(totalVal/1000)+'k';
+  document.getElementById('stat-active').textContent=deals.filter(d=>d.stage!=='Closed').length;
+  document.getElementById('stat-closed').textContent=deals.filter(d=>d.stage==='Closed').length;
+  board.innerHTML='';
+  STAGES.forEach(s=>{
+    const col=document.createElement('div'); col.className='stage-col';
+    const ds=deals.filter(d=>d.stage===s);
+    col.innerHTML=`<div class="stage-label">${s}<span class="badge">${ds.length}</span></div>`;
+    ds.forEach(d=>{
+      const c=contacts.find(x=>x.id===d.contact_id);
+      const card=document.createElement('div'); card.className='deal-card';
+      card.innerHTML=`<div class="deal-name">${d.name}</div><div class="deal-meta">${d.type||''}${c?' · '+c.name:''}</div>${d.value?'<div class="deal-val">'+fmt(d.value)+'</div>':''}`;
+      card.onclick=()=>openDealModal(d.id);
+      col.appendChild(card);
+    });
+    board.appendChild(col);
+  });
+}
+
+function renderContacts(){
+  const q=(document.getElementById('contact-search').value||'').toLowerCase();
+  const list=document.getElementById('contact-list');
+  const filtered=contacts.filter(c=>!q||c.name.toLowerCase().includes(q)||(c.company||'').toLowerCase().includes(q)||(c.role||'').toLowerCase().includes(q));
+  if(!filtered.length){list.innerHTML='<div class="empty">No contacts yet.</div>';return;}
+  list.innerHTML=filtered.map(c=>`<div class="contact-row" onclick="openContactModal('${c.id}')">
+    <div class="avatar">${c.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
+    <div class="contact-info"><div class="contact-name">${c.name}</div><div class="contact-detail">${c.company||''} · ${c.email||''}</div></div>
+    <div class="contact-tag">${c.role||''}</div>
+  </div>`).join('');
+}
+
+function renderNotes(){
+  const sel=document.getElementById('note-filter');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">All notes</option>'+deals.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+  sel.value=cur;
+  const filter=sel.value;
+  const filtered=filter?notes.filter(n=>n.deal_id===filter):notes;
+  const list=document.getElementById('note-list');
+  if(!filtered.length){list.innerHTML='<div class="empty">No notes yet.</div>';return;}
+  list.innerHTML=[...filtered].reverse().map(n=>{
+    const d=deals.find(x=>x.id===n.deal_id);
+    const ds=new Date(n.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    return `<div class="note-card"><div class="note-meta">${ds}${d?' · <span style="color:#0066cc">'+d.name+'</span>':' · General'}</div><div class="note-text">${n.text}</div></div>`;
+  }).join('');
+}
+
+function renderEmail(){
+  document.getElementById('email-recipients').innerHTML=contacts.map(c=>`<span class="tag-pill${selectedRecipients.has(c.id)?' sel':''}" onclick="toggleRecipient('${c.id}',this)">${c.name}</span>`).join('');
+  renderSent();
+}
+function toggleRecipient(id,el){ selectedRecipients.has(id)?selectedRecipients.delete(id):selectedRecipients.add(id); el.classList.toggle('sel'); }
+function previewEmail(){
+  const subj=document.getElementById('email-subject').value||'(no subject)';
+  const body=document.getElementById('email-body').value||'(no body)';
+  const names=contacts.filter(c=>selectedRecipients.has(c.id)).map(c=>c.name).join(', ')||'(no recipients)';
+  document.getElementById('email-preview-box').textContent=`To: ${names}\nSubject: ${subj}\n\n${body}`;
+}
+async function sendBlast(){
+  const subj=document.getElementById('email-subject').value;
+  const body=document.getElementById('email-body').value;
+  if(!subj||!body){alert('Please add a subject and body.');return;}
+  const recips=contacts.filter(c=>selectedRecipients.has(c.id));
+  if(!recips.length){alert('Select at least one recipient.');return;}
+  const blast={id:uid(),subject:subj,body,recipients:recips.map(c=>c.name),sent_at:new Date().toISOString()};
+  await sb.from('email_blasts').insert(blast);
+  sentBlasts.unshift(blast);
+  document.getElementById('email-subject').value='';
+  document.getElementById('email-body').value='';
+  selectedRecipients.clear();
+  renderEmail();
+  showToast('Blast logged to '+recips.length+' recipient(s).');
+}
+function renderSent(){
+  const el=document.getElementById('sent-list');
+  if(!sentBlasts.length){el.textContent='None yet.';return;}
+  el.innerHTML=sentBlasts.slice(0,5).map(b=>{
+    const dt=new Date(b.sent_at).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    return `<div style="padding:8px 0;border-bottom:1px solid #e5e5e3"><div style="font-weight:500">${b.subject}</div><div style="font-size:11px;color:#888">${dt} · ${(b.recipients||[]).join(', ')}</div></div>`;
+  }).join('');
+}
+
+function renderCommissions(){
+  const filter=document.getElementById('comm-filter').value;
+  const filtered=filter?commissions.filter(c=>c.status===filter):commissions;
+  const totalGross=commissions.reduce((s,c)=>{return s+(c.sale*c.rate/100)*((c.split||100)/100);},0);
+  const totalReceived=commissions.filter(c=>c.status==='Received').reduce((s,c)=>{return s+(c.sale*c.rate/100)*((c.split||100)/100);},0);
+  document.getElementById('comm-stats').innerHTML=`
+    <div class="stat"><div class="stat-label">Total</div><div class="stat-val">${commissions.length}</div></div>
+    <div class="stat"><div class="stat-label">Gross pipeline</div><div class="stat-val">${fmt(totalGross)}</div></div>
+    <div class="stat"><div class="stat-label">Received</div><div class="stat-val" style="color:#1a7340">${fmt(totalReceived)}</div></div>
+  `;
+  const list=document.getElementById('comm-list');
+  if(!filtered.length){list.innerHTML='<div class="empty">No commissions yet.</div>';return;}
+  list.innerHTML=filtered.map(c=>{
+    const d=deals.find(x=>x.id===c.deal_id);
+    const gross=(c.sale*c.rate/100)*((c.split||100)/100);
+    const dt=c.close_date?new Date(c.close_date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'';
+    return `<div class="comm-row" onclick="openCommModal('${c.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div><div style="font-size:13px;font-weight:500">${d?d.name:'Unknown deal'}</div>
+        <div style="font-size:11px;color:#888;margin-top:2px">${c.rate}% · ${c.split||100}% side${dt?' · '+dt:''}</div>
+        ${c.notes?'<div style="font-size:11px;color:#888;margin-top:2px">'+c.notes+'</div>':''}</div>
+        <div style="text-align:right;flex-shrink:0;margin-left:12px">
+          <div style="font-size:15px;font-weight:500">${fmt(gross)}</div>
+          <span class="status-${c.status}">${c.status}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function calcComm(){
+  const sale=+document.getElementById('comm-sale').value||0;
+  const rate=+document.getElementById('comm-rate').value||0;
+  const split=+document.getElementById('comm-split').value||100;
+  const gross=sale*rate/100; const net=gross*(split/100);
+  document.getElementById('comm-calc').innerHTML=sale&&rate
+    ?`Gross: <strong>${fmt(gross)}</strong> &nbsp;·&nbsp; Your side (${split}%): <strong>${fmt(net)}</strong>`
+    :'Enter sale price and rate to calculate.';
+}
+
+function openDealModal(id){
+  const sel=document.getElementById('deal-contact');
+  sel.innerHTML='<option value="">— none —</option>'+contacts.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  if(id){
+    const d=deals.find(x=>x.id===id);
+    document.getElementById('deal-modal-title').textContent='Edit deal';
+    document.getElementById('deal-id').value=d.id;
+    document.getElementById('deal-name').value=d.name;
+    document.getElementById('deal-type').value=d.type||'Retail';
+    document.getElementById('deal-stage').value=d.stage||'Prospect';
+    document.getElementById('deal-value').value=d.value||'';
+    document.getElementById('deal-contact').value=d.contact_id||'';
+    document.getElementById('deal-notes').value=d.notes||'';
+    document.getElementById('deal-delete-btn').style.display='inline-block';
+  } else {
+    document.getElementById('deal-modal-title').textContent='Add deal';
+    ['deal-id','deal-name','deal-value','deal-notes'].forEach(f=>document.getElementById(f).value='');
+    document.getElementById('deal-stage').value='Prospect';
+    document.getElementById('deal-delete-btn').style.display='none';
+  }
+  document.getElementById('deal-modal').classList.add('open');
+}
+async function saveDeal(){
+  const id=document.getElementById('deal-id').value;
+  const obj={id:id||uid(),name:document.getElementById('deal-name').value,type:document.getElementById('deal-type').value,stage:document.getElementById('deal-stage').value,value:+document.getElementById('deal-value').value||null,contact_id:document.getElementById('deal-contact').value||null,notes:document.getElementById('deal-notes').value};
+  if(!obj.name){alert('Deal name is required.');return;}
+  if(id){await sb.from('deals').update(obj).eq('id',id); deals=deals.map(d=>d.id===id?obj:d);}
+  else{await sb.from('deals').insert(obj); deals.push(obj);}
+  closeModal('deal-modal'); renderPipeline(); showToast('Deal saved.');
+}
+async function deleteDeal(){
+  if(!confirm('Delete this deal?'))return;
+  const id=document.getElementById('deal-id').value;
+  await sb.from('deals').delete().eq('id',id);
+  deals=deals.filter(d=>d.id!==id); notes=notes.filter(n=>n.deal_id!==id);
+  closeModal('deal-modal'); renderPipeline(); showToast('Deal deleted.');
+}
+
+function openContactModal(id){
+  if(id){
+    const c=contacts.find(x=>x.id===id);
+    document.getElementById('contact-modal-title').textContent='Edit contact';
+    document.getElementById('contact-id').value=c.id;
+    document.getElementById('c-name').value=c.name;
+    document.getElementById('c-role').value=c.role||'Buyer';
+    document.getElementById('c-company').value=c.company||'';
+    document.getElementById('c-email').value=c.email||'';
+    document.getElementById('c-phone').value=c.phone||'';
+    document.getElementById('contact-delete-btn').style.display='inline-block';
+  } else {
+    document.getElementById('contact-modal-title').textContent='Add contact';
+    ['contact-id','c-name','c-company','c-email','c-phone'].forEach(f=>document.getElementById(f).value='');
+    document.getElementById('contact-delete-btn').style.display='none';
+  }
+  document.getElementById('contact-modal').classList.add('open');
+}
+async function saveContact(){
+  const id=document.getElementById('contact-id').value;
+  const obj={id:id||uid(),name:document.getElementById('c-name').value,role:document.getElementById('c-role').value,company:document.getElementById('c-company').value,email:document.getElementById('c-email').value,phone:document.getElementById('c-phone').value};
+  if(!obj.name){alert('Name is required.');return;}
+  if(id){await sb.from('contacts').update(obj).eq('id',id); contacts=contacts.map(c=>c.id===id?obj:c);}
+  else{await sb.from('contacts').insert(obj); contacts.push(obj);}
+  closeModal('contact-modal'); renderContacts(); showToast('Contact saved.');
+}
+async function deleteContact(){
+  if(!confirm('Delete this contact?'))return;
+  const id=document.getElementById('contact-id').value;
+  await sb.from('contacts').delete().eq('id',id);
+  contacts=contacts.filter(c=>c.id!==id);
+  closeModal('contact-modal'); renderContacts(); showToast('Contact deleted.');
+}
+
+function openNoteModal(){
+  document.getElementById('note-text').value='';
+  const sel=document.getElementById('note-deal');
+  sel.innerHTML='<option value="">— general —</option>'+deals.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+  document.getElementById('note-modal').classList.add('open');
+}
+async function saveNote(){
+  const text=document.getElementById('note-text').value;
+  if(!text){alert('Note text is required.');return;}
+  const obj={id:uid(),deal_id:document.getElementById('note-deal').value||null,text,date:new Date().toISOString()};
+  await sb.from('deal_notes').insert(obj);
+  notes.push(obj); closeModal('note-modal'); renderNotes(); showToast('Note saved.');
+}
+
+function openCommModal(id){
+  const sel=document.getElementById('comm-deal');
+  sel.innerHTML='<option value="">— select deal —</option>'+deals.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+  if(id){
+    const c=commissions.find(x=>x.id===id);
+    document.getElementById('comm-modal-title').textContent='Edit commission';
+    document.getElementById('comm-id').value=c.id;
+    document.getElementById('comm-deal').value=c.deal_id||'';
+    document.getElementById('comm-sale').value=c.sale||'';
+    document.getElementById('comm-rate').value=c.rate||'';
+    document.getElementById('comm-split').value=c.split||50;
+    document.getElementById('comm-date').value=c.close_date||'';
+    document.getElementById('comm-status').value=c.status||'Expected';
+    document.getElementById('comm-notes').value=c.notes||'';
+    document.getElementById('comm-delete-btn').style.display='inline-block';
+    calcComm();
+  } else {
+    document.getElementById('comm-modal-title').textContent='Add commission';
+    ['comm-id','comm-sale','comm-rate','comm-date','comm-notes'].forEach(f=>document.getElementById(f).value='');
+    document.getElementById('comm-split').value=50;
+    document.getElementById('comm-status').value='Expected';
+    document.getElementById('comm-delete-btn').style.display='none';
+    document.getElementById('comm-calc').textContent='Enter sale price and rate to calculate.';
+  }
+  document.getElementById('comm-modal').classList.add('open');
+}
+async function saveComm(){
+  const id=document.getElementById('comm-id').value;
+  const obj={id:id||uid(),deal_id:document.getElementById('comm-deal').value||null,sale:+document.getElementById('comm-sale').value,rate:+document.getElementById('comm-rate').value,split:+document.getElementById('comm-split').value,close_date:document.getElementById('comm-date').value||null,status:document.getElementById('comm-status').value,notes:document.getElementById('comm-notes').value};
+  if(!obj.sale||!obj.rate){alert('Sale price and rate are required.');return;}
+  if(id){await sb.from('commissions').update(obj).eq('id',id); commissions=commissions.map(c=>c.id===id?obj:c);}
+  else{await sb.from('commissions').insert(obj); commissions.push(obj);}
+  closeModal('comm-modal'); renderCommissions(); showToast('Commission saved.');
+}
+async function deleteComm(){
+  if(!confirm('Delete this commission?'))return;
+  const id=document.getElementById('comm-id').value;
+  await sb.from('commissions').delete().eq('id',id);
+  commissions=commissions.filter(c=>c.id!==id);
+  closeModal('comm-modal'); renderCommissions(); showToast('Commission deleted.');
+}
+
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')}));
+
+function toCSV(rows){ return rows.map(r=>r.map(v=>{const s=String(v==null?'':v).replace(/"/g,'""');return /[",\n]/.test(s)?`"${s}"`:s;}).join(',')).join('\n'); }
+function download(filename,content){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([content],{type:'text/csv'})); a.download=filename; a.click(); }
+function exportDeals(){ const rows=[['Name','Type','Stage','Value','Contact','Notes']]; deals.forEach(d=>{const c=contacts.find(x=>x.id===d.contact_id); rows.push([d.name,d.type,d.stage,d.value||'',c?c.name:'',d.notes||'']);}); download('deals.csv',toCSV(rows)); }
+function exportContacts(){ const rows=[['Name','Role','Company','Email','Phone']]; contacts.forEach(c=>rows.push([c.name,c.role,c.company,c.email,c.phone])); download('contacts.csv',toCSV(rows)); }
+function exportCommissions(){ const rows=[['Deal','Sale Price','Rate (%)','Split (%)','Gross Comm','Net Comm','Status','Close Date','Notes']]; commissions.forEach(c=>{const d=deals.find(x=>x.id===c.deal_id); const gross=c.sale*c.rate/100; const net=gross*(c.split||100)/100; rows.push([d?d.name:'',c.sale,c.rate,c.split||100,Math.round(gross),Math.round(net),c.status,c.close_date||'',c.notes||'']);}); download('commissions.csv',toCSV(rows)); }
+
+loadAll();
+</script>
+</body>
+</html>
