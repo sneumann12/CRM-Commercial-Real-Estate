@@ -185,11 +185,15 @@ tr:hover td{background:var(--accent-light);cursor:pointer}
     <!-- LEFT: Stats + Pipeline summary -->
     <div>
       <div class="section-label" style="font-size:11px">Pipeline snapshot</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">
         <div class="stat"><div class="stat-label">Total deals</div><div class="stat-val" id="dash-total">—</div></div>
         <div class="stat" style="border-top-color:var(--gold)"><div class="stat-label">Pipeline value</div><div class="stat-val gold-val" id="dash-val">—</div></div>
         <div class="stat"><div class="stat-label">Active deals</div><div class="stat-val" id="dash-active">—</div></div>
-        <div class="stat" style="border-top-color:var(--gold)"><div class="stat-label">Commissions due</div><div class="stat-val gold-val" id="dash-comm">—</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1rem">
+        <div class="stat" style="border-top-color:var(--gold)"><div class="stat-label">Gross commission</div><div class="stat-val gold-val" id="dash-gross">—</div></div>
+        <div class="stat" style="border-top-color:var(--gold)"><div class="stat-label">My gross (co-broke)</div><div class="stat-val gold-val" id="dash-mygross">—</div></div>
+        <div class="stat" style="border-top-color:var(--gold)"><div class="stat-label">My net (after splits)</div><div class="stat-val gold-val" id="dash-comm">—</div></div>
       </div>
       <div class="section-label" style="font-size:11px">Sales pipeline</div>
       <div id="dash-sales" style="margin-bottom:1.5rem"></div>
@@ -370,6 +374,15 @@ tr:hover td{background:var(--accent-light);cursor:pointer}
       <div class="field"><label>Size (SF)</label><input type="number" id="deal-sf" placeholder="e.g. 17424" oninput="updateDealCalc()"></div>
     </div>
     <div class="field" id="deal-calc-row" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;font-size:13px;color:var(--text2);display:none">Calculated total will appear here</div>
+    <div style="border-top:1px solid var(--border);margin:12px 0 12px;padding-top:12px">
+      <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Commission</div>
+      <div class="grid2">
+        <div class="field"><label>Commission rate (%)</label><input type="number" id="deal-comm-rate" placeholder="e.g. 3" step="0.1" oninput="updateDealCalc()"></div>
+        <div class="field"><label>Co-broke split (% my side)</label><input type="number" id="deal-cobroke" placeholder="e.g. 50" step="1" oninput="updateDealCalc()"></div>
+      </div>
+      <div class="field"><label>Partner / referral fee (% of my gross)</label><input type="number" id="deal-partner-fee" placeholder="e.g. 25" step="1" oninput="updateDealCalc()"></div>
+      <div id="deal-comm-calc" style="background:var(--gold-light);border:1px solid var(--gold);border-radius:var(--radius-sm);padding:10px;font-size:13px;display:none"></div>
+    </div>
     <div class="field"><label>Follow-up date</label><input type="date" id="deal-followup"></div>
     <div class="field"><label>Deal notes</label><textarea id="deal-notes" placeholder="Zoning, financing, key terms..."></textarea></div>
 
@@ -616,12 +629,30 @@ function switchPipeline(type,el){
 
 function renderDashboard(){
   // Stats
-  const totalVal=deals.reduce((s,d)=>s+(+d.value||0),0);
-  const pendingComm=commissions.filter(c=>c.status!=='Received').reduce((s,c)=>s+(c.sale*c.rate/100)*((c.split||100)/100),0);
+  const activeDeals=deals.filter(d=>d.stage!=='Closed'&&d.stage!=='Executed');
+  const totalVal=deals.reduce((s,d)=>{
+    const dv=d.deal_type==='Leasing'?(d.value||0)*(d.size_sf||0)*12:(d.value||0);
+    return s+dv;
+  },0);
+  const grossComm=deals.filter(d=>d.comm_rate).reduce((s,d)=>{
+    const dv=d.deal_type==='Leasing'?(d.value||0)*(d.size_sf||0)*12:(d.value||0);
+    return s+dv*(d.comm_rate/100);
+  },0);
+  const myGross=deals.filter(d=>d.comm_rate).reduce((s,d)=>{
+    const dv=d.deal_type==='Leasing'?(d.value||0)*(d.size_sf||0)*12:(d.value||0);
+    return s+dv*(d.comm_rate/100)*((d.cobroke_split||100)/100);
+  },0);
+  const myNet=deals.filter(d=>d.comm_rate).reduce((s,d)=>{
+    const dv=d.deal_type==='Leasing'?(d.value||0)*(d.size_sf||0)*12:(d.value||0);
+    const gross=dv*(d.comm_rate/100)*((d.cobroke_split||100)/100);
+    return s+gross*(1-((d.partner_fee||0)/100));
+  },0);
   document.getElementById('dash-total').textContent=deals.length;
   document.getElementById('dash-val').textContent='$'+Math.round(totalVal).toLocaleString();
-  document.getElementById('dash-active').textContent=deals.filter(d=>d.stage!=='Closed'&&d.stage!=='Executed').length;
-  document.getElementById('dash-comm').textContent=fmt(pendingComm);
+  document.getElementById('dash-active').textContent=activeDeals.length;
+  document.getElementById('dash-gross').textContent=fmt(grossComm);
+  document.getElementById('dash-mygross').textContent=fmt(myGross);
+  document.getElementById('dash-comm').textContent=fmt(myNet);
   // Sales pipeline
   const salesEl=document.getElementById('dash-sales');
   salesEl.innerHTML=SALES_STAGES.map(s=>{
@@ -839,17 +870,21 @@ function renderPipeline(){
       const noteCount=notes.filter(n=>n.deal_id===d.id).length;
       const isLease=d.deal_type==='Leasing';
       const sf=d.size_sf?d.size_sf.toLocaleString()+' SF':'';
-      const valLabel=isLease?'$/SF/yr':'Sale price';
       const valDisplay=d.value?'$'+Number(d.value).toLocaleString()+(isLease?'/SF/mo':''):'';
+      const dealVal=isLease?(d.value||0)*(d.size_sf||0)*12:(d.value||0);
       const calcDisplay=d.value&&d.size_sf
         ?(isLease?fmt(d.value*d.size_sf*12)+'/yr':('$'+(d.value/d.size_sf).toFixed(0)+'/SF'))
         :'';
+      const myNet=d.comm_rate&&dealVal
+        ?dealVal*(d.comm_rate/100)*((d.cobroke_split||100)/100)*(1-((d.partner_fee||0)/100))
+        :0;
       const card=document.createElement('div');card.className='deal-card';
       card.innerHTML=`<div class="deal-name" style="text-decoration:underline">${d.name}</div>
         <div class="deal-meta">${cl?'<span style="font-weight:600;color:var(--text)">'+cl.name+'</span>':''}</div>
         ${sf?'<div style="font-size:11px;color:var(--text3);margin-top:4px">'+sf+'</div>':''}
         ${valDisplay?'<div class="deal-val">'+valDisplay+'</div>':''}
-        ${calcDisplay?'<div style="font-size:11px;color:var(--gold);font-weight:600;margin-top:1px">'+calcDisplay+'</div>':''}
+        ${calcDisplay?'<div style="font-size:11px;color:var(--text2);margin-top:1px">'+calcDisplay+'</div>':''}
+        ${myNet?'<div style="font-size:11px;color:var(--gold);font-weight:600;margin-top:4px;border-top:1px solid var(--border);padding-top:4px">Net comm: '+fmt(myNet)+'</div>':''}
         ${noteCount?'<div style="font-size:11px;color:var(--text3);margin-top:4px">📝 '+noteCount+' note'+(noteCount>1?'s':'')+'</div>':''}`;
       card.onclick=()=>openDealModal(d.id);
       col.appendChild(card);
@@ -1020,8 +1055,8 @@ function renderSent(){
 function renderCommissions(){
   const filter=document.getElementById('comm-filter').value;
   const filtered=filter?commissions.filter(c=>c.status===filter):commissions;
-  const totalGross=commissions.reduce((s,c)=>s+(c.sale*c.rate/100)*((c.split||100)/100),0);
-  const totalReceived=commissions.filter(c=>c.status==='Received').reduce((s,c)=>s+(c.sale*c.rate/100)*((c.split||100)/100),0);
+  const totalGross=commissions.reduce((s,c)=>s+(c.sale*c.rate/100)*((c.split||100)/100)*(1-((c.partner_fee||0)/100)),0);
+  const totalReceived=commissions.filter(c=>c.status==='Received').reduce((s,c)=>s+(c.sale*c.rate/100)*((c.split||100)/100)*(1-((c.partner_fee||0)/100)),0);
   document.getElementById('comm-stats').innerHTML=`
     <div class="stat"><div class="stat-label">Total</div><div class="stat-val">${commissions.length}</div></div>
     <div class="stat" style="border-top-color:var(--gold)"><div class="stat-label">Gross pipeline</div><div class="stat-val gold-val">${fmt(totalGross)}</div></div>
@@ -1030,7 +1065,7 @@ function renderCommissions(){
   if(!filtered.length){list.innerHTML='<div class="empty">No commissions yet.</div>';return;}
   list.innerHTML=filtered.map(c=>{
     const d=deals.find(x=>x.id===c.deal_id);
-    const gross=(c.sale*c.rate/100)*((c.split||100)/100);
+    const gross=(c.sale*c.rate/100)*((c.split||100)/100)*(1-((c.partner_fee||0)/100));
     const dt=c.close_date?new Date(c.close_date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'';
     return `<div class="comm-row" onclick="openCommModal('${c.id}')">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
@@ -1073,8 +1108,14 @@ function updateDealCalc(){
   const pipeline=document.getElementById('deal-pipeline').value;
   const val=+document.getElementById('deal-value').value||0;
   const sf=+document.getElementById('deal-sf').value||0;
+  const commRate=+document.getElementById('deal-comm-rate').value||0;
+  const cobroke=+document.getElementById('deal-cobroke').value||100;
+  const partnerFee=+document.getElementById('deal-partner-fee').value||0;
   const row=document.getElementById('deal-calc-row');
-  if(!row)return;
+  const commRow=document.getElementById('deal-comm-calc');
+  if(!row||!commRow)return;
+
+  // Deal value calc
   if(val&&sf){
     if(pipeline==='Sales'){
       const ppsf=(val/sf).toFixed(2);
@@ -1086,9 +1127,22 @@ function updateDealCalc(){
       row.style.display='block';
       row.innerHTML=`<span style="color:var(--text3)">Monthly rent:</span> <strong style="color:var(--gold)">${fmt(monthly)}</strong> &nbsp;·&nbsp; <span style="color:var(--text3)">Annual:</span> <strong style="color:var(--gold)">${fmt(annual)}</strong>`;
     }
-  } else {
-    row.style.display='none';
-  }
+  } else { row.style.display='none'; }
+
+  // Commission calc
+  if(commRate&&(val||(sf&&val))){
+    const dealVal=pipeline==='Sales'?val:(val*sf*12);
+    const grossComm=dealVal*commRate/100;
+    const myGross=grossComm*(cobroke/100);
+    const myNet=myGross*(1-(partnerFee/100));
+    commRow.style.display='block';
+    commRow.innerHTML=`
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">
+        <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Gross comm</div><div style="font-size:14px;font-weight:700;color:var(--gold)">${fmt(grossComm)}</div></div>
+        <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">My gross (${cobroke}%)</div><div style="font-size:14px;font-weight:700;color:var(--gold)">${fmt(myGross)}</div></div>
+        <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">My net${partnerFee?` (-${partnerFee}%)`:''}</div><div style="font-size:14px;font-weight:700;color:var(--gold)">${fmt(myNet)}</div></div>
+      </div>`;
+  } else { commRow.style.display='none'; }
 }
 
 function renderDealNotes(dealId){
@@ -1129,6 +1183,9 @@ function openDealModal(id){
     document.getElementById('deal-client').value=d.client_id||'';
     document.getElementById('deal-value').value=d.value||'';
     document.getElementById('deal-sf').value=d.size_sf||'';
+    document.getElementById('deal-comm-rate').value=d.comm_rate||'';
+    document.getElementById('deal-cobroke').value=d.cobroke_split||'';
+    document.getElementById('deal-partner-fee').value=d.partner_fee||'';
     document.getElementById('deal-followup').value=d.follow_up_date||'';
     document.getElementById('deal-notes').value=d.notes||'';
     document.getElementById('deal-delete-btn').style.display='inline-block';
@@ -1136,7 +1193,7 @@ function openDealModal(id){
     renderDealNotes(id);
   }else{
     document.getElementById('deal-modal-title').textContent='Add deal';
-    ['deal-id','deal-name','deal-value','deal-sf','deal-followup','deal-notes','new-note-text'].forEach(f=>document.getElementById(f).value='');
+    ['deal-id','deal-name','deal-value','deal-sf','deal-comm-rate','deal-cobroke','deal-partner-fee','deal-followup','deal-notes','new-note-text'].forEach(f=>document.getElementById(f).value='');
     document.getElementById('deal-pipeline').value=activePipeline==='sales'?'Sales':'Leasing';
     updateStageOptions();
     document.getElementById('deal-delete-btn').style.display='none';
@@ -1147,10 +1204,34 @@ function openDealModal(id){
 async function saveDeal(){
   const id=document.getElementById('deal-id').value;
   const followUp=document.getElementById('deal-followup').value;
-  const obj={id:id||uid(),name:document.getElementById('deal-name').value,deal_type:document.getElementById('deal-pipeline').value,stage:document.getElementById('deal-stage').value,type:document.getElementById('deal-type').value,client_id:document.getElementById('deal-client').value||null,value:+document.getElementById('deal-value').value||null,size_sf:+document.getElementById('deal-sf').value||null,follow_up_date:followUp||null,notes:document.getElementById('deal-notes').value};
+  const obj={id:id||uid(),name:document.getElementById('deal-name').value,deal_type:document.getElementById('deal-pipeline').value,stage:document.getElementById('deal-stage').value,type:document.getElementById('deal-type').value,client_id:document.getElementById('deal-client').value||null,value:+document.getElementById('deal-value').value||null,size_sf:+document.getElementById('deal-sf').value||null,comm_rate:+document.getElementById('deal-comm-rate').value||null,cobroke_split:+document.getElementById('deal-cobroke').value||100,partner_fee:+document.getElementById('deal-partner-fee').value||0,follow_up_date:followUp||null,notes:document.getElementById('deal-notes').value};
   if(!obj.name){alert('Deal name is required.');return;}
   if(id){await sb.from('deals').update(obj).eq('id',id);deals=deals.map(d=>d.id===id?obj:d);}
   else{await sb.from('deals').insert(obj);deals.push(obj);activeDealId=obj.id;}
+
+  // Auto-create/update commission record if rate is set
+  if(obj.comm_rate){
+    const dealVal=obj.deal_type==='Sales'?obj.value:((obj.value||0)*(obj.size_sf||0)*12);
+    const commRecord={
+      id:uid(),
+      deal_id:obj.id,
+      sale:dealVal,
+      rate:obj.comm_rate,
+      split:obj.cobroke_split||100,
+      partner_fee:obj.partner_fee||0,
+      status:'Expected',
+      close_date:null,
+      notes:'Auto-generated from deal'
+    };
+    const existing=commissions.find(c=>c.deal_id===obj.id);
+    if(existing){
+      await sb.from('commissions').update({sale:commRecord.sale,rate:commRecord.rate,split:commRecord.split,partner_fee:commRecord.partner_fee}).eq('id',existing.id);
+      commissions=commissions.map(c=>c.id===existing.id?{...c,...commRecord,id:existing.id}:c);
+    } else {
+      await sb.from('commissions').insert(commRecord);
+      commissions.push(commRecord);
+    }
+  }
   // Auto-create a follow-up task if date is set
   if(followUp){
     const existingFollowUp=todos.find(t=>t.deal_id===obj.id&&t.type==='Follow Up');
