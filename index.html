@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CRE CRM</title>
+<title>CRE CRM – Stefan Neumann</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -40,20 +40,19 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
 textarea{resize:vertical;min-height:70px}
 .field{margin-bottom:12px}
 .field label{display:block;font-size:12px;color:#666;margin-bottom:4px}
-.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:flex-start;justify-content:center;padding-top:60px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:flex-start;justify-content:center;padding-top:40px;overflow-y:auto}
 .modal-bg.open{display:flex}
-.modal{background:#fff;border:1px solid #e5e5e3;border-radius:12px;padding:1.25rem;width:460px;max-width:95vw;max-height:85vh;overflow-y:auto}
+.modal{background:#fff;border:1px solid #e5e5e3;border-radius:12px;padding:1.25rem;width:500px;max-width:95vw;max-height:88vh;overflow-y:auto;margin:auto}
 .modal-title{font-size:16px;font-weight:500;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center}
 .close-btn{background:none;border:none;cursor:pointer;font-size:20px;color:#888;line-height:1}
 .row{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:1rem}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1rem}
 .stat{background:#fff;border:1px solid #e5e5e3;border-radius:8px;padding:10px}
 .stat-label{font-size:11px;color:#888;margin-bottom:3px}
 .stat-val{font-size:18px;font-weight:500}
-.search-row{display:flex;gap:8px;margin-bottom:1rem}
-.search-row input{flex:1}
+.search-row{display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap}
+.search-row input{flex:1;min-width:160px}
 .empty{text-align:center;padding:2rem;color:#888;font-size:13px}
 .badge{display:inline-block;font-size:11px;padding:2px 6px;border-radius:6px;margin-left:4px;background:#f5f5f3;color:#888}
 .client-card{background:#fff;border:1px solid #e5e5e3;border-radius:10px;padding:1rem;margin-bottom:10px;cursor:pointer}
@@ -63,13 +62,20 @@ textarea{resize:vertical;min-height:70px}
 .client-deals{margin-top:10px;padding-top:10px;border-top:1px solid #f0f0ee}
 .client-deal-row{display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:6px;margin-bottom:4px;background:#f9f9f8;cursor:pointer}
 .client-deal-row:hover{background:#f0f0ee}
-.client-deal-name{font-size:13px;font-weight:500}
-.client-deal-meta{font-size:11px;color:#888}
 .stage-pill{font-size:11px;padding:2px 8px;border-radius:6px;background:#e8f0fe;color:#0066cc;white-space:nowrap}
 .stage-pill-lease{background:#e6f4ea;color:#1a7340}
-.note-card{background:#fff;border:1px solid #e5e5e3;border-radius:8px;padding:12px 14px;margin-bottom:8px}
-.note-meta{font-size:11px;color:#888;margin-bottom:4px}
+.contact-row{background:#fff;border:1px solid #e5e5e3;border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:8px}
+.contact-row:hover{border-color:#ccc}
+.avatar{width:36px;height:36px;border-radius:50%;background:#e8f0fe;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:#0066cc;flex-shrink:0}
+.contact-info{flex:1;min-width:0}
+.contact-name{font-size:14px;font-weight:500}
+.contact-detail{font-size:12px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.type-pill{font-size:11px;padding:2px 8px;border-radius:6px;background:#f0f0ee;color:#555;flex-shrink:0}
+.note-card{background:#f9f9f8;border:1px solid #e5e5e3;border-radius:8px;padding:10px 12px;margin-bottom:8px}
+.note-meta{font-size:11px;color:#888;margin-bottom:3px}
 .note-text{font-size:13px;line-height:1.5}
+.deal-notes-section{margin-top:1rem;padding-top:1rem;border-top:1px solid #e5e5e3}
+.deal-notes-title{font-size:12px;font-weight:500;color:#666;margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em}
 .tag-pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;margin:2px;cursor:pointer;border:1px solid #d5d5d3;color:#666}
 .tag-pill.sel{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
 .comm-row{background:#fff;border:1px solid #e5e5e3;border-radius:8px;padding:12px 14px;margin-bottom:8px;cursor:pointer}
@@ -93,6 +99,8 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
 .submarket-pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;background:#f0f0ee;color:#555}
 .promote-btn{font-size:11px;padding:2px 8px;border-radius:6px;border:1px solid #1a7340;color:#1a7340;background:transparent;cursor:pointer;white-space:nowrap}
 .promote-btn:hover{background:#e6f4ea}
+.add-note-row{display:flex;gap:8px;margin-top:8px}
+.add-note-row input{flex:1}
 </style>
 </head>
 <body>
@@ -102,9 +110,9 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
   <div class="tab-bar">
     <button class="tab active" onclick="switchTab('pipeline',this)">Pipeline</button>
     <button class="tab" onclick="switchTab('clients',this)">Clients</button>
+    <button class="tab" onclick="switchTab('contacts',this)">Contacts</button>
     <button class="tab" onclick="switchTab('leads',this)">Leads</button>
     <button class="tab" onclick="switchTab('offmarket',this)">Off Market</button>
-    <button class="tab" onclick="switchTab('notes',this)">Notes</button>
     <button class="tab" onclick="switchTab('email',this)">Email blast</button>
     <button class="tab" onclick="switchTab('commissions',this)">Commissions</button>
     <button class="tab" onclick="switchTab('export',this)">Export</button>
@@ -141,45 +149,43 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
   <div id="client-list"><div class="loading">Loading...</div></div>
 </div>
 
+<!-- CONTACTS -->
+<div class="view" id="view-contacts">
+  <div class="search-row">
+    <input type="text" placeholder="Search contacts..." id="contact-search" oninput="renderContacts()">
+    <select id="contact-type-filter" onchange="renderContacts()" style="width:auto">
+      <option value="">All types</option>
+      <option>Client</option><option>Broker</option><option>Lender</option><option>Vendor</option><option>Investor</option><option>Attorney</option><option>Other</option>
+    </select>
+    <button class="btn btn-primary" onclick="openContactModal()">+ Add contact</button>
+  </div>
+  <div id="contact-list"><div class="loading">Loading...</div></div>
+</div>
+
 <!-- LEADS -->
 <div class="view" id="view-leads">
   <div class="search-row">
     <input type="text" placeholder="Search leads..." id="lead-search" oninput="renderLeads()">
     <button class="btn btn-primary" onclick="openLeadModal()">+ Add lead</button>
   </div>
-  <div style="font-size:12px;color:#888;margin-bottom:1rem">Leads are prospects that haven't entered the active pipeline yet. Promote them to a deal when they're ready.</div>
+  <div style="font-size:12px;color:#888;margin-bottom:1rem">Prospects not yet in the active pipeline. Hit "→ Deal" to promote when ready.</div>
   <div class="table-wrap">
-    <table id="lead-table">
-      <thead><tr><th>Address</th><th>Owner</th><th>Contact</th><th>Notes</th><th>Added</th><th></th></tr></thead>
-      <tbody id="lead-body"></tbody>
-    </table>
+    <table><thead><tr><th>Address</th><th>Owner</th><th>Contact</th><th>Notes</th><th>Added</th><th></th></tr></thead>
+    <tbody id="lead-body"></tbody></table>
   </div>
 </div>
 
 <!-- OFF MARKET -->
 <div class="view" id="view-offmarket">
   <div class="search-row">
-    <input type="text" placeholder="Search off market properties..." id="om-search" oninput="renderOffMarket()">
-    <select id="om-submarket-filter" onchange="renderOffMarket()" style="width:auto">
-      <option value="">All submarkets</option>
-    </select>
+    <input type="text" placeholder="Search..." id="om-search" oninput="renderOffMarket()">
+    <select id="om-submarket-filter" onchange="renderOffMarket()" style="width:auto"><option value="">All submarkets</option></select>
     <button class="btn btn-primary" onclick="openOMModal()">+ Add property</button>
   </div>
   <div class="table-wrap">
-    <table id="om-table">
-      <thead><tr><th>Address</th><th>Submarket</th><th>Type</th><th>Size (SF)</th><th>Est. Value</th><th>Owner</th><th>Last Contact</th><th>Notes</th><th></th></tr></thead>
-      <tbody id="om-body"></tbody>
-    </table>
+    <table><thead><tr><th>Address</th><th>Submarket</th><th>Type</th><th>Size (SF)</th><th>Est. Value</th><th>Owner</th><th>Last Contact</th><th>Notes</th></tr></thead>
+    <tbody id="om-body"></tbody></table>
   </div>
-</div>
-
-<!-- NOTES -->
-<div class="view" id="view-notes">
-  <div class="search-row">
-    <select id="note-filter" onchange="renderNotes()" style="width:auto;flex:1"><option value="">All notes</option></select>
-    <button class="btn btn-primary" onclick="openNoteModal()">+ Add note</button>
-  </div>
-  <div id="note-list"></div>
 </div>
 
 <!-- EMAIL -->
@@ -188,7 +194,7 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
     <div>
       <div class="field"><label>Subject</label><input type="text" id="email-subject" placeholder="e.g. Q3 deal update"></div>
       <div class="field"><label>Body</label><textarea id="email-body" style="min-height:120px"></textarea></div>
-      <div class="field"><label>Recipients</label><div id="email-recipients" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px"></div></div>
+      <div class="field"><label>Recipients (from Contacts)</label><div id="email-recipients" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px"></div></div>
       <div style="display:flex;gap:8px;margin-top:.5rem">
         <button class="btn" onclick="previewEmail()">Preview</button>
         <button class="btn btn-primary" onclick="sendBlast()">Send blast</button>
@@ -209,9 +215,7 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
     <select id="comm-filter" onchange="renderCommissions()" style="width:auto;font-size:13px">
       <option value="">All statuses</option>
-      <option value="Expected">Expected</option>
-      <option value="Partial">Partial</option>
-      <option value="Received">Received</option>
+      <option>Expected</option><option>Partial</option><option>Received</option>
     </select>
     <button class="btn btn-primary" onclick="openCommModal()">+ Add commission</button>
   </div>
@@ -221,7 +225,8 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
 <!-- EXPORT -->
 <div class="view" id="view-export">
   <div style="max-width:480px">
-    <div class="export-card"><h3>Clients</h3><p>Name, company, email, phone, type</p><button class="btn btn-primary btn-sm" onclick="exportClients()">Download clients.csv</button></div>
+    <div class="export-card"><h3>Contacts</h3><p>Name, company, title, email, phone, type, submarket, notes</p><button class="btn btn-primary btn-sm" onclick="exportContacts()">Download contacts.csv</button></div>
+    <div class="export-card"><h3>Clients</h3><p>Name, type, primary contact, email, phone</p><button class="btn btn-primary btn-sm" onclick="exportClients()">Download clients.csv</button></div>
     <div class="export-card"><h3>Deals</h3><p>Name, pipeline, stage, value, client, notes</p><button class="btn btn-primary btn-sm" onclick="exportDeals()">Download deals.csv</button></div>
     <div class="export-card"><h3>Leads</h3><p>Address, owner, contact info, notes</p><button class="btn btn-primary btn-sm" onclick="exportLeads()">Download leads.csv</button></div>
     <div class="export-card"><h3>Off market properties</h3><p>Address, submarket, size, value, owner, last contact</p><button class="btn btn-primary btn-sm" onclick="exportOffMarket()">Download off_market.csv</button></div>
@@ -232,6 +237,8 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
 </div>
 
 <!-- MODALS -->
+
+<!-- DEAL MODAL (with inline notes) -->
 <div class="modal-bg" id="deal-modal">
   <div class="modal">
     <div class="modal-title"><span id="deal-modal-title">Add deal</span><button class="close-btn" onclick="closeModal('deal-modal')">×</button></div>
@@ -250,7 +257,18 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
       <div class="field"><label>Client</label><select id="deal-client"><option value="">— none —</option></select></div>
     </div>
     <div class="field"><label>Value ($)</label><input type="number" id="deal-value" placeholder="Sale price or annual rent"></div>
-    <div class="field"><label>Notes</label><textarea id="deal-notes"></textarea></div>
+    <div class="field"><label>Deal notes</label><textarea id="deal-notes" placeholder="Zoning, financing, key terms..."></textarea></div>
+
+    <!-- Inline deal notes -->
+    <div class="deal-notes-section" id="deal-notes-section" style="display:none">
+      <div class="deal-notes-title">Activity log</div>
+      <div id="deal-note-list"></div>
+      <div class="add-note-row">
+        <input type="text" id="new-note-text" placeholder="Add a note — call summary, site visit, update...">
+        <button class="btn btn-sm btn-primary" onclick="addDealNote()">Add</button>
+      </div>
+    </div>
+
     <div class="row">
       <button class="btn btn-danger" id="deal-delete-btn" onclick="deleteDeal()" style="display:none;margin-right:auto">Delete</button>
       <button class="btn" onclick="closeModal('deal-modal')">Cancel</button>
@@ -259,6 +277,7 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
   </div>
 </div>
 
+<!-- CLIENT MODAL -->
 <div class="modal-bg" id="client-modal">
   <div class="modal">
     <div class="modal-title"><span id="client-modal-title">Add client</span><button class="close-btn" onclick="closeModal('client-modal')">×</button></div>
@@ -269,7 +288,7 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
         <select id="cl-type"><option>Buyer</option><option>Seller</option><option>Tenant</option><option>Landlord</option><option>Investor</option><option>Lender</option><option>Broker</option><option>Other</option></select>
       </div>
     </div>
-    <div class="field"><label>Primary contact name</label><input type="text" id="cl-contact" placeholder="e.g. Dana Roth"></div>
+    <div class="field"><label>Primary contact name</label><input type="text" id="cl-contact"></div>
     <div class="grid2">
       <div class="field"><label>Email</label><input type="email" id="cl-email"></div>
       <div class="field"><label>Phone</label><input type="tel" id="cl-phone"></div>
@@ -283,6 +302,41 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
   </div>
 </div>
 
+<!-- CONTACT MODAL -->
+<div class="modal-bg" id="contact-modal">
+  <div class="modal">
+    <div class="modal-title"><span id="contact-modal-title">Add contact</span><button class="close-btn" onclick="closeModal('contact-modal')">×</button></div>
+    <input type="hidden" id="ct-id">
+    <div class="grid2">
+      <div class="field"><label>Full name</label><input type="text" id="ct-name"></div>
+      <div class="field"><label>Type</label>
+        <select id="ct-type"><option>Client</option><option>Broker</option><option>Lender</option><option>Vendor</option><option>Investor</option><option>Attorney</option><option>Other</option></select>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Company</label><input type="text" id="ct-company"></div>
+      <div class="field"><label>Title</label><input type="text" id="ct-title" placeholder="e.g. VP Acquisitions"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Email</label><input type="email" id="ct-email"></div>
+      <div class="field"><label>Phone</label><input type="tel" id="ct-phone"></div>
+    </div>
+    <div class="field"><label>Submarket</label>
+      <select id="ct-submarket">
+        <option value="">— none —</option>
+        <option>Manhattan Beach</option><option>Hermosa Beach</option><option>Redondo Beach</option><option>Torrance</option><option>El Segundo</option><option>Hawthorne</option><option>Inglewood</option><option>Culver City</option><option>Santa Monica</option><option>Venice</option><option>Marina del Rey</option><option>Playa Vista</option><option>Hollywood</option><option>Other</option>
+      </select>
+    </div>
+    <div class="field"><label>Notes</label><textarea id="ct-notes" placeholder="Relationship notes, preferences, how you met..."></textarea></div>
+    <div class="row">
+      <button class="btn btn-danger" id="contact-delete-btn" onclick="deleteContact()" style="display:none;margin-right:auto">Delete</button>
+      <button class="btn" onclick="closeModal('contact-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveContact()">Save contact</button>
+    </div>
+  </div>
+</div>
+
+<!-- LEAD MODAL -->
 <div class="modal-bg" id="lead-modal">
   <div class="modal">
     <div class="modal-title"><span id="lead-modal-title">Add lead</span><button class="close-btn" onclick="closeModal('lead-modal')">×</button></div>
@@ -303,11 +357,12 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
   </div>
 </div>
 
+<!-- OFF MARKET MODAL -->
 <div class="modal-bg" id="om-modal">
   <div class="modal">
     <div class="modal-title"><span id="om-modal-title">Add off market property</span><button class="close-btn" onclick="closeModal('om-modal')">×</button></div>
     <input type="hidden" id="om-id">
-    <div class="field"><label>Property address</label><input type="text" id="om-address" placeholder="e.g. 1301 N Sepulveda Blvd, Manhattan Beach"></div>
+    <div class="field"><label>Property address</label><input type="text" id="om-address"></div>
     <div class="grid2">
       <div class="field"><label>Submarket</label>
         <select id="om-submarket">
@@ -320,8 +375,8 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
       </div>
     </div>
     <div class="grid2">
-      <div class="field"><label>Size (SF)</label><input type="number" id="om-size" placeholder="e.g. 17424"></div>
-      <div class="field"><label>Est. value ($)</label><input type="number" id="om-value" placeholder="e.g. 4500000"></div>
+      <div class="field"><label>Size (SF)</label><input type="number" id="om-size"></div>
+      <div class="field"><label>Est. value ($)</label><input type="number" id="om-value"></div>
     </div>
     <div class="field"><label>Owner name</label><input type="text" id="om-owner-name"></div>
     <div class="grid2">
@@ -329,7 +384,7 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
       <div class="field"><label>Owner phone</label><input type="tel" id="om-owner-phone"></div>
     </div>
     <div class="field"><label>Last contact date</label><input type="date" id="om-last-contact"></div>
-    <div class="field"><label>Notes</label><textarea id="om-notes" placeholder="Ownership structure, motivation, zoning, prior outreach..."></textarea></div>
+    <div class="field"><label>Notes</label><textarea id="om-notes"></textarea></div>
     <div class="row">
       <button class="btn btn-danger" id="om-delete-btn" onclick="deleteOM()" style="display:none;margin-right:auto">Delete</button>
       <button class="btn" onclick="closeModal('om-modal')">Cancel</button>
@@ -338,18 +393,7 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
   </div>
 </div>
 
-<div class="modal-bg" id="note-modal">
-  <div class="modal">
-    <div class="modal-title"><span>Add note</span><button class="close-btn" onclick="closeModal('note-modal')">×</button></div>
-    <div class="field"><label>Linked deal</label><select id="note-deal"><option value="">— general —</option></select></div>
-    <div class="field"><label>Note</label><textarea id="note-text" style="min-height:120px"></textarea></div>
-    <div class="row">
-      <button class="btn" onclick="closeModal('note-modal')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveNote()">Save note</button>
-    </div>
-  </div>
-</div>
-
+<!-- COMM MODAL -->
 <div class="modal-bg" id="comm-modal">
   <div class="modal">
     <div class="modal-title"><span id="comm-modal-title">Add commission</span><button class="close-btn" onclick="closeModal('comm-modal')">×</button></div>
@@ -386,9 +430,10 @@ const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 const SALES_STAGES=['Prospect','LOI','Due diligence','In escrow','Closed'];
 const LEASE_STAGES=['Prospect','Tour','LOI','Lease negotiation','Executed'];
 
-let deals=[],clients=[],notes=[],commissions=[],leads=[],offMarket=[],sentBlasts=[];
+let deals=[],clients=[],contacts=[],notes=[],commissions=[],leads=[],offMarket=[],sentBlasts=[];
 let selectedRecipients=new Set();
 let activePipeline='sales';
+let activeDealId=null;
 
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2);}
 function fmt(n){return '$'+Math.round(n).toLocaleString();}
@@ -399,15 +444,16 @@ function setSync(msg){document.getElementById('sync-status').textContent=msg;}
 async function loadAll(){
   setSync('Syncing...');
   try{
-    const [d,c,n,k,l,o]=await Promise.all([
+    const [d,cl,ct,n,k,l,o]=await Promise.all([
       sb.from('deals').select('*'),
       sb.from('clients').select('*'),
+      sb.from('contacts').select('*'),
       sb.from('deal_notes').select('*'),
       sb.from('commissions').select('*'),
       sb.from('leads').select('*'),
       sb.from('off_market').select('*'),
     ]);
-    deals=d.data||[];clients=c.data||[];notes=n.data||[];commissions=k.data||[];leads=l.data||[];offMarket=o.data||[];
+    deals=d.data||[];clients=cl.data||[];contacts=ct.data||[];notes=n.data||[];commissions=k.data||[];leads=l.data||[];offMarket=o.data||[];
     setSync('Synced ✓');
     renderPipeline();
   }catch(e){setSync('Connection error');console.error(e);}
@@ -420,18 +466,16 @@ function switchTab(t,el){
   document.getElementById('view-'+t).classList.add('active');
   if(t==='pipeline')renderPipeline();
   if(t==='clients')renderClients();
+  if(t==='contacts')renderContacts();
   if(t==='leads')renderLeads();
   if(t==='offmarket')renderOffMarket();
-  if(t==='notes')renderNotes();
   if(t==='email')renderEmail();
   if(t==='commissions')renderCommissions();
 }
 
 function switchPipeline(type,el){
   document.querySelectorAll('.ptab').forEach(b=>b.classList.remove('active'));
-  el.classList.add('active');
-  activePipeline=type;
-  renderPipeline();
+  el.classList.add('active');activePipeline=type;renderPipeline();
 }
 
 function renderPipeline(){
@@ -450,8 +494,9 @@ function renderPipeline(){
     col.innerHTML=`<div class="stage-label">${s}<span class="badge">${ds.length}</span></div>`;
     ds.forEach(d=>{
       const cl=clients.find(x=>x.id===d.client_id);
+      const noteCount=notes.filter(n=>n.deal_id===d.id).length;
       const card=document.createElement('div');card.className='deal-card';
-      card.innerHTML=`<div class="deal-name">${d.name}</div><div class="deal-meta">${d.type||''}${cl?' · '+cl.name:''}</div>${d.value?'<div class="deal-val">'+fmt(d.value)+'</div>':''}`;
+      card.innerHTML=`<div class="deal-name">${d.name}</div><div class="deal-meta">${d.type||''}${cl?' · '+cl.name:''}</div>${d.value?'<div class="deal-val">'+fmt(d.value)+'</div>':''}${noteCount?'<div style="font-size:11px;color:#888;margin-top:4px">📝 '+noteCount+' note'+(noteCount>1?'s':'')+'</div>':''}`;
       card.onclick=()=>openDealModal(d.id);
       col.appendChild(card);
     });
@@ -469,7 +514,7 @@ function renderClients(){
     const dealsHtml=clDeals.length?clDeals.map(d=>{
       const isLease=(d.deal_type||'Sales')==='Leasing';
       return `<div class="client-deal-row" onclick="event.stopPropagation();openDealModal('${d.id}')">
-        <div><div class="client-deal-name">${d.name}</div><div class="client-deal-meta">${d.type||''}</div></div>
+        <div><div style="font-size:13px;font-weight:500">${d.name}</div><div style="font-size:11px;color:#888">${d.type||''}</div></div>
         <div style="display:flex;gap:6px;align-items:center">
           ${d.value?'<span style="font-size:12px;color:#0066cc;font-weight:500">'+fmt(d.value)+'</span>':''}
           <span class="stage-pill ${isLease?'stage-pill-lease':''}">${d.stage}</span>
@@ -485,6 +530,28 @@ function renderClients(){
       <div class="client-deals">${dealsHtml}</div>
     </div>`;
   }).join('');
+}
+
+function renderContacts(){
+  const q=(document.getElementById('contact-search').value||'').toLowerCase();
+  const typeFilter=document.getElementById('contact-type-filter').value;
+  const filtered=contacts.filter(c=>{
+    const matchQ=!q||c.name.toLowerCase().includes(q)||(c.company||'').toLowerCase().includes(q)||(c.title||'').toLowerCase().includes(q)||(c.email||'').toLowerCase().includes(q);
+    const matchT=!typeFilter||c.type===typeFilter;
+    return matchQ&&matchT;
+  });
+  const list=document.getElementById('contact-list');
+  if(!filtered.length){list.innerHTML='<div class="empty">No contacts yet.</div>';return;}
+  list.innerHTML=filtered.map(c=>`
+    <div class="contact-row" onclick="openContactModal('${c.id}')">
+      <div class="avatar">${c.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
+      <div class="contact-info">
+        <div class="contact-name">${c.name}${c.title?'<span style="font-size:11px;font-weight:400;color:#888;margin-left:6px">'+c.title+'</span>':''}</div>
+        <div class="contact-detail">${[c.company,c.email,c.phone].filter(Boolean).join(' · ')}</div>
+        ${c.submarket?'<div style="margin-top:3px"><span class="submarket-pill">'+c.submarket+'</span></div>':''}
+      </div>
+      <span class="type-pill">${c.type||''}</span>
+    </div>`).join('');
 }
 
 function renderLeads(){
@@ -519,7 +586,7 @@ function renderOffMarket(){
     return matchQ&&matchSM;
   });
   const tbody=document.getElementById('om-body');
-  if(!filtered.length){tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:2rem;color:#888">No off market properties yet.</td></tr>';return;}
+  if(!filtered.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:2rem;color:#888">No off market properties yet.</td></tr>';return;}
   tbody.innerHTML=filtered.map(o=>{
     const lc=o.last_contact?new Date(o.last_contact+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—';
     const daysSince=o.last_contact?Math.floor((Date.now()-new Date(o.last_contact+'T12:00:00'))/(1000*60*60*24)):null;
@@ -533,43 +600,26 @@ function renderOffMarket(){
       <td>${o.owner_name||'—'}${o.owner_phone?'<br><span style="font-size:11px;color:#888">'+o.owner_phone+'</span>':''}</td>
       <td style="white-space:nowrap;${stale?'color:#cc0000':''}">${lc}${stale?' ⚠':''}${daysSince!==null?'<br><span style="font-size:11px;color:#aaa">'+daysSince+'d ago</span>':''}</td>
       <td style="color:#666;max-width:180px;font-size:12px">${o.notes||''}</td>
-      <td></td>
     </tr>`;
   }).join('');
 }
 
-function renderNotes(){
-  const sel=document.getElementById('note-filter');
-  const cur=sel.value;
-  sel.innerHTML='<option value="">All notes</option>'+deals.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
-  sel.value=cur;
-  const filter=sel.value;
-  const filtered=filter?notes.filter(n=>n.deal_id===filter):notes;
-  const list=document.getElementById('note-list');
-  if(!filtered.length){list.innerHTML='<div class="empty">No notes yet.</div>';return;}
-  list.innerHTML=[...filtered].reverse().map(n=>{
-    const d=deals.find(x=>x.id===n.deal_id);
-    const ds=new Date(n.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-    return `<div class="note-card"><div class="note-meta">${ds}${d?' · <span style="color:#0066cc">'+d.name+'</span>':' · General'}</div><div class="note-text">${n.text}</div></div>`;
-  }).join('');
-}
-
 function renderEmail(){
-  document.getElementById('email-recipients').innerHTML=clients.map(c=>`<span class="tag-pill${selectedRecipients.has(c.id)?' sel':''}" onclick="toggleRecipient('${c.id}',this)">${c.name}</span>`).join('');
+  document.getElementById('email-recipients').innerHTML=contacts.map(c=>`<span class="tag-pill${selectedRecipients.has(c.id)?' sel':''}" onclick="toggleRecipient('${c.id}',this)">${c.name}</span>`).join('');
   renderSent();
 }
 function toggleRecipient(id,el){selectedRecipients.has(id)?selectedRecipients.delete(id):selectedRecipients.add(id);el.classList.toggle('sel');}
 function previewEmail(){
   const subj=document.getElementById('email-subject').value||'(no subject)';
   const body=document.getElementById('email-body').value||'(no body)';
-  const names=clients.filter(c=>selectedRecipients.has(c.id)).map(c=>c.name).join(', ')||'(no recipients)';
+  const names=contacts.filter(c=>selectedRecipients.has(c.id)).map(c=>c.name).join(', ')||'(no recipients)';
   document.getElementById('email-preview-box').textContent=`To: ${names}\nSubject: ${subj}\n\n${body}`;
 }
 async function sendBlast(){
   const subj=document.getElementById('email-subject').value;
   const body=document.getElementById('email-body').value;
   if(!subj||!body){alert('Please add a subject and body.');return;}
-  const recips=clients.filter(c=>selectedRecipients.has(c.id));
+  const recips=contacts.filter(c=>selectedRecipients.has(c.id));
   if(!recips.length){alert('Select at least one recipient.');return;}
   const blast={id:uid(),subject:subj,body,recipients:recips.map(c=>c.name),sent_at:new Date().toISOString()};
   await sb.from('email_blasts').insert(blast);
@@ -634,10 +684,32 @@ function updateStageOptions(){
   if(stages.includes(cur))sel.value=cur;
 }
 
-// DEAL
+function renderDealNotes(dealId){
+  const dealNotes=notes.filter(n=>n.deal_id===dealId).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const list=document.getElementById('deal-note-list');
+  if(!dealNotes.length){list.innerHTML='<div style="font-size:12px;color:#aaa;padding:4px 0 8px">No notes yet.</div>';return;}
+  list.innerHTML=dealNotes.map(n=>{
+    const dt=new Date(n.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    return `<div class="note-card"><div class="note-meta">${dt}</div><div class="note-text">${n.text}</div></div>`;
+  }).join('');
+}
+
+async function addDealNote(){
+  const text=document.getElementById('new-note-text').value.trim();
+  if(!text||!activeDealId)return;
+  const obj={id:uid(),deal_id:activeDealId,text,date:new Date().toISOString()};
+  const {error}=await sb.from('deal_notes').insert(obj);
+  if(error){showToast('Error saving note');return;}
+  notes.push(obj);
+  document.getElementById('new-note-text').value='';
+  renderDealNotes(activeDealId);
+  renderPipeline();
+}
+
 function openDealModal(id){
   const sel=document.getElementById('deal-client');
   sel.innerHTML='<option value="">— none —</option>'+clients.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  activeDealId=id||null;
   if(id){
     const d=deals.find(x=>x.id===id);
     document.getElementById('deal-modal-title').textContent='Edit deal';
@@ -651,12 +723,15 @@ function openDealModal(id){
     document.getElementById('deal-value').value=d.value||'';
     document.getElementById('deal-notes').value=d.notes||'';
     document.getElementById('deal-delete-btn').style.display='inline-block';
+    document.getElementById('deal-notes-section').style.display='block';
+    renderDealNotes(id);
   }else{
     document.getElementById('deal-modal-title').textContent='Add deal';
-    ['deal-id','deal-name','deal-value','deal-notes'].forEach(f=>document.getElementById(f).value='');
+    ['deal-id','deal-name','deal-value','deal-notes','new-note-text'].forEach(f=>document.getElementById(f).value='');
     document.getElementById('deal-pipeline').value=activePipeline==='sales'?'Sales':'Leasing';
     updateStageOptions();
     document.getElementById('deal-delete-btn').style.display='none';
+    document.getElementById('deal-notes-section').style.display='none';
   }
   document.getElementById('deal-modal').classList.add('open');
 }
@@ -665,7 +740,7 @@ async function saveDeal(){
   const obj={id:id||uid(),name:document.getElementById('deal-name').value,deal_type:document.getElementById('deal-pipeline').value,stage:document.getElementById('deal-stage').value,type:document.getElementById('deal-type').value,client_id:document.getElementById('deal-client').value||null,value:+document.getElementById('deal-value').value||null,notes:document.getElementById('deal-notes').value};
   if(!obj.name){alert('Deal name is required.');return;}
   if(id){await sb.from('deals').update(obj).eq('id',id);deals=deals.map(d=>d.id===id?obj:d);}
-  else{await sb.from('deals').insert(obj);deals.push(obj);}
+  else{await sb.from('deals').insert(obj);deals.push(obj);activeDealId=obj.id;}
   closeModal('deal-modal');renderPipeline();showToast('Deal saved.');
 }
 async function deleteDeal(){
@@ -676,7 +751,6 @@ async function deleteDeal(){
   closeModal('deal-modal');renderPipeline();showToast('Deal deleted.');
 }
 
-// CLIENT
 function openClientModal(id){
   if(id){
     const c=clients.find(x=>x.id===id);
@@ -705,14 +779,51 @@ async function saveClient(){
   closeModal('client-modal');renderClients();showToast('Client saved.');
 }
 async function deleteClient(){
-  if(!confirm('Delete this client? Their deals will remain but be unlinked.'))return;
+  if(!confirm('Delete this client?'))return;
   const id=document.getElementById('client-id').value;
   await sb.from('clients').delete().eq('id',id);
   clients=clients.filter(c=>c.id!==id);
   closeModal('client-modal');renderClients();showToast('Client deleted.');
 }
 
-// LEAD
+function openContactModal(id){
+  if(id){
+    const c=contacts.find(x=>x.id===id);
+    document.getElementById('contact-modal-title').textContent='Edit contact';
+    document.getElementById('ct-id').value=c.id;
+    document.getElementById('ct-name').value=c.name;
+    document.getElementById('ct-type').value=c.type||'Other';
+    document.getElementById('ct-company').value=c.company||'';
+    document.getElementById('ct-title').value=c.title||'';
+    document.getElementById('ct-email').value=c.email||'';
+    document.getElementById('ct-phone').value=c.phone||'';
+    document.getElementById('ct-submarket').value=c.submarket||'';
+    document.getElementById('ct-notes').value=c.notes||'';
+    document.getElementById('contact-delete-btn').style.display='inline-block';
+  }else{
+    document.getElementById('contact-modal-title').textContent='Add contact';
+    ['ct-id','ct-name','ct-company','ct-title','ct-email','ct-phone','ct-notes'].forEach(f=>document.getElementById(f).value='');
+    document.getElementById('ct-submarket').value='';
+    document.getElementById('contact-delete-btn').style.display='none';
+  }
+  document.getElementById('contact-modal').classList.add('open');
+}
+async function saveContact(){
+  const id=document.getElementById('ct-id').value;
+  const obj={id:id||uid(),name:document.getElementById('ct-name').value,type:document.getElementById('ct-type').value,company:document.getElementById('ct-company').value,title:document.getElementById('ct-title').value,email:document.getElementById('ct-email').value,phone:document.getElementById('ct-phone').value,submarket:document.getElementById('ct-submarket').value,notes:document.getElementById('ct-notes').value};
+  if(!obj.name){alert('Name is required.');return;}
+  if(id){await sb.from('contacts').update(obj).eq('id',id);contacts=contacts.map(c=>c.id===id?obj:c);}
+  else{await sb.from('contacts').insert(obj);contacts.push(obj);}
+  closeModal('contact-modal');renderContacts();showToast('Contact saved.');
+}
+async function deleteContact(){
+  if(!confirm('Delete this contact?'))return;
+  const id=document.getElementById('ct-id').value;
+  await sb.from('contacts').delete().eq('id',id);
+  contacts=contacts.filter(c=>c.id!==id);
+  closeModal('contact-modal');renderContacts();showToast('Contact deleted.');
+}
+
 function openLeadModal(id){
   if(id){
     const l=leads.find(x=>x.id===id);
@@ -750,20 +861,16 @@ async function deleteLead(){
 }
 function promoteLead(){
   const address=document.getElementById('lead-address').value;
-  closeModal('lead-modal');
-  openDealModal();
+  closeModal('lead-modal');openDealModal();
   document.getElementById('deal-name').value=address;
   showToast('Lead promoted — fill in deal details and save.');
 }
 function promoteLeadById(id){
-  const l=leads.find(x=>x.id===id);
-  if(!l)return;
-  openDealModal();
-  document.getElementById('deal-name').value=l.address;
+  const l=leads.find(x=>x.id===id);if(!l)return;
+  openDealModal();document.getElementById('deal-name').value=l.address;
   showToast('Lead promoted — fill in deal details and save.');
 }
 
-// OFF MARKET
 function openOMModal(id){
   if(id){
     const o=offMarket.find(x=>x.id===id);
@@ -804,22 +911,6 @@ async function deleteOM(){
   closeModal('om-modal');renderOffMarket();showToast('Property deleted.');
 }
 
-// NOTE
-function openNoteModal(){
-  document.getElementById('note-text').value='';
-  const sel=document.getElementById('note-deal');
-  sel.innerHTML='<option value="">— general —</option>'+deals.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
-  document.getElementById('note-modal').classList.add('open');
-}
-async function saveNote(){
-  const text=document.getElementById('note-text').value;
-  if(!text){alert('Note text is required.');return;}
-  const obj={id:uid(),deal_id:document.getElementById('note-deal').value||null,text,date:new Date().toISOString()};
-  await sb.from('deal_notes').insert(obj);
-  notes.push(obj);closeModal('note-modal');renderNotes();showToast('Note saved.');
-}
-
-// COMMISSION
 function openCommModal(id){
   const sel=document.getElementById('comm-deal');
   sel.innerHTML='<option value="">— select deal —</option>'+deals.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
@@ -865,9 +956,9 @@ async function deleteComm(){
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')}));
 
-// EXPORT
 function toCSV(rows){return rows.map(r=>r.map(v=>{const s=String(v==null?'':v).replace(/"/g,'""');return /[",\n]/.test(s)?`"${s}"`:s;}).join(',')).join('\n');}
 function download(filename,content){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type:'text/csv'}));a.download=filename;a.click();}
+function exportContacts(){const rows=[['Name','Type','Company','Title','Email','Phone','Submarket','Notes']];contacts.forEach(c=>rows.push([c.name,c.type||'',c.company||'',c.title||'',c.email||'',c.phone||'',c.submarket||'',c.notes||'']));download('contacts.csv',toCSV(rows));}
 function exportClients(){const rows=[['Name','Type','Primary Contact','Email','Phone','Notes']];clients.forEach(c=>rows.push([c.name,c.type||'',c.cl_contact||'',c.email||'',c.phone||'',c.notes||'']));download('clients.csv',toCSV(rows));}
 function exportDeals(){const rows=[['Name','Pipeline','Stage','Property Type','Value','Client','Notes']];deals.forEach(d=>{const cl=clients.find(x=>x.id===d.client_id);rows.push([d.name,d.deal_type||'Sales',d.stage,d.type||'',d.value||'',cl?cl.name:'',d.notes||'']);});download('deals.csv',toCSV(rows));}
 function exportLeads(){const rows=[['Address','Owner Name','Owner Email','Owner Phone','Notes','Added']];leads.forEach(l=>rows.push([l.address,l.owner_name||'',l.owner_email||'',l.owner_phone||'',l.notes||'',l.created_at?new Date(l.created_at).toLocaleDateString():'']));download('leads.csv',toCSV(rows));}
