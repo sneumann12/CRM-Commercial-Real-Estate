@@ -97,6 +97,22 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
 .toast.show{opacity:1}
 .loading{text-align:center;padding:3rem;color:#888;font-size:13px}
 .submarket-pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;background:#f0f0ee;color:#555}
+.todo-item{background:#fff;border:1px solid #e5e5e3;border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;align-items:flex-start;gap:10px;cursor:pointer}
+.todo-item:hover{border-color:#ccc}
+.todo-item.done-item{opacity:.5}
+.todo-check{width:18px;height:18px;border-radius:50%;border:2px solid #d5d5d3;flex-shrink:0;margin-top:1px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px}
+.todo-check.checked{background:#1a1a1a;border-color:#1a1a1a;color:#fff}
+.todo-text-wrap{flex:1;min-width:0}
+.todo-title{font-size:13px;font-weight:500;color:#1a1a1a}
+.todo-title.done{text-decoration:line-through;color:#aaa}
+.todo-meta{font-size:11px;color:#888;margin-top:2px}
+.pri-high{color:#cc0000;font-weight:500}
+.pri-normal{color:#888}
+.pri-low{color:#aaa}
+.dash-stage-row{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:6px;background:#f9f9f8;margin-bottom:4px;font-size:13px;cursor:pointer}
+.dash-stage-row:hover{background:#f0f0ee}
+.dash-stage-label{color:#666;font-size:12px}
+.dash-stage-count{font-weight:500}
 .promote-btn{font-size:11px;padding:2px 8px;border-radius:6px;border:1px solid #1a7340;color:#1a7340;background:transparent;cursor:pointer;white-space:nowrap}
 .promote-btn:hover{background:#e6f4ea}
 .add-note-row{display:flex;gap:8px;margin-top:8px}
@@ -108,7 +124,9 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
 <div class="topbar">
   <div class="logo">CRE CRM</div>
   <div class="tab-bar">
-    <button class="tab active" onclick="switchTab('pipeline',this)">Pipeline</button>
+    <button class="tab active" onclick="switchTab('dashboard',this)">Dashboard</button>
+    <button class="tab" onclick="switchTab('pipeline',this)">Pipeline</button>
+    <button class="tab" onclick="switchTab('todos',this)">To Do</button>
     <button class="tab" onclick="switchTab('clients',this)">Clients</button>
     <button class="tab" onclick="switchTab('contacts',this)">Contacts</button>
     <button class="tab" onclick="switchTab('leads',this)">Leads</button>
@@ -122,8 +140,36 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
 
 <div class="main">
 
+<!-- DASHBOARD -->
+<div class="view active" id="view-dashboard">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+    <!-- LEFT: Stats + Pipeline summary -->
+    <div>
+      <div style="font-size:13px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Pipeline snapshot</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem">
+        <div class="stat"><div class="stat-label">Total deals</div><div class="stat-val" id="dash-total">—</div></div>
+        <div class="stat"><div class="stat-label">Pipeline value</div><div class="stat-val" id="dash-val">—</div></div>
+        <div class="stat"><div class="stat-label">Active deals</div><div class="stat-val" id="dash-active">—</div></div>
+        <div class="stat"><div class="stat-label">Commissions due</div><div class="stat-val" id="dash-comm" style="color:#1a7340">—</div></div>
+      </div>
+      <div style="font-size:13px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Sales pipeline</div>
+      <div id="dash-sales" style="margin-bottom:1.5rem"></div>
+      <div style="font-size:13px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Leasing pipeline</div>
+      <div id="dash-leasing"></div>
+    </div>
+    <!-- RIGHT: To Do -->
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:.05em">To do</div>
+        <button class="btn btn-sm btn-primary" onclick="openTodoModal()">+ Add task</button>
+      </div>
+      <div id="dash-todos"></div>
+    </div>
+  </div>
+</div>
+
 <!-- PIPELINE -->
-<div class="view active" id="view-pipeline">
+<div class="view" id="view-pipeline">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;gap:8px">
     <div class="stats" style="flex:1;margin-bottom:0">
       <div class="stat"><div class="stat-label">Total deals</div><div class="stat-val" id="stat-total">—</div></div>
@@ -138,6 +184,25 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
     <button class="ptab" onclick="switchPipeline('leasing',this)">Leasing</button>
   </div>
   <div id="pipeline-board" class="stage-cols"><div class="loading">Loading...</div></div>
+</div>
+
+<!-- TO DO -->
+<div class="view" id="view-todos">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+    <div style="display:flex;gap:8px">
+      <select id="todo-filter" onchange="renderTodos()" style="width:auto;font-size:13px">
+        <option value="active">Open tasks</option>
+        <option value="all">All tasks</option>
+        <option value="done">Completed</option>
+      </select>
+      <select id="todo-priority-filter" onchange="renderTodos()" style="width:auto;font-size:13px">
+        <option value="">All priorities</option>
+        <option>High</option><option>Normal</option><option>Low</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" onclick="openTodoModal()">+ Add task</button>
+  </div>
+  <div id="todo-list"></div>
 </div>
 
 <!-- CLIENTS -->
@@ -412,7 +477,26 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<!-- TODO MODAL -->
+<div class="modal-bg" id="todo-modal">
+  <div class="modal">
+    <div class="modal-title"><span id="todo-modal-title">Add task</span><button class="close-btn" onclick="closeModal('todo-modal')">×</button></div>
+    <input type="hidden" id="todo-id">
+    <div class="field"><label>Task</label><input type="text" id="todo-text" placeholder="e.g. Follow up with Dana re: LOI"></div>
+    <div class="grid2">
+      <div class="field"><label>Priority</label>
+        <select id="todo-priority"><option>High</option><option selected>Normal</option><option>Low</option></select>
+      </div>
+      <div class="field"><label>Due date</label><input type="date" id="todo-due"></div>
+    </div>
+    <div class="field"><label>Linked deal (optional)</label><select id="todo-deal"><option value="">— none —</option></select></div>
+    <div class="row">
+      <button class="btn btn-danger" id="todo-delete-btn" onclick="deleteTodo()" style="display:none;margin-right:auto">Delete</button>
+      <button class="btn" onclick="closeModal('todo-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTodo()">Save task</button>
+    </div>
+  </div>
+</div>
 
 <script>
 const SUPABASE_URL='https://tymyhsidyetcfevjskxm.supabase.co';
@@ -422,7 +506,7 @@ const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 const SALES_STAGES=['Prospect','LOI','Due diligence','In escrow','Closed'];
 const LEASE_STAGES=['Prospect','Tour','LOI','Lease negotiation','Executed'];
 
-let deals=[],clients=[],contacts=[],notes=[],commissions=[],leads=[],offMarket=[],sentBlasts=[];
+let deals=[],clients=[],contacts=[],notes=[],commissions=[],leads=[],offMarket=[],sentBlasts=[],todos=[];
 let selectedRecipients=new Set();
 let activePipeline='sales';
 let activeDealId=null;
@@ -436,7 +520,7 @@ function setSync(msg){document.getElementById('sync-status').textContent=msg;}
 async function loadAll(){
   setSync('Syncing...');
   try{
-    const [d,cl,ct,n,k,l,o]=await Promise.all([
+    const [d,cl,ct,n,k,l,o,td]=await Promise.all([
       sb.from('deals').select('*'),
       sb.from('clients').select('*'),
       sb.from('contacts').select('*'),
@@ -444,10 +528,11 @@ async function loadAll(){
       sb.from('commissions').select('*'),
       sb.from('leads').select('*'),
       sb.from('off_market').select('*'),
+      sb.from('todos').select('*'),
     ]);
-    deals=d.data||[];clients=cl.data||[];contacts=ct.data||[];notes=n.data||[];commissions=k.data||[];leads=l.data||[];offMarket=o.data||[];
+    deals=d.data||[];clients=cl.data||[];contacts=ct.data||[];notes=n.data||[];commissions=k.data||[];leads=l.data||[];offMarket=o.data||[];todos=td.data||[];
     setSync('Synced ✓');
-    renderPipeline();
+    renderDashboard();
   }catch(e){setSync('Connection error');console.error(e);}
 }
 
@@ -456,7 +541,9 @@ function switchTab(t,el){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('view-'+t).classList.add('active');
+  if(t==='dashboard')renderDashboard();
   if(t==='pipeline')renderPipeline();
+  if(t==='todos')renderTodos();
   if(t==='clients')renderClients();
   if(t==='contacts')renderContacts();
   if(t==='leads')renderLeads();
@@ -468,6 +555,158 @@ function switchTab(t,el){
 function switchPipeline(type,el){
   document.querySelectorAll('.ptab').forEach(b=>b.classList.remove('active'));
   el.classList.add('active');activePipeline=type;renderPipeline();
+}
+
+function renderDashboard(){
+  // Stats
+  const totalVal=deals.reduce((s,d)=>s+(+d.value||0),0);
+  const pendingComm=commissions.filter(c=>c.status!=='Received').reduce((s,c)=>s+(c.sale*c.rate/100)*((c.split||100)/100),0);
+  document.getElementById('dash-total').textContent=deals.length;
+  document.getElementById('dash-val').textContent='$'+Math.round(totalVal/1000)+'k';
+  document.getElementById('dash-active').textContent=deals.filter(d=>d.stage!=='Closed'&&d.stage!=='Executed').length;
+  document.getElementById('dash-comm').textContent=fmt(pendingComm);
+  // Sales pipeline
+  const salesEl=document.getElementById('dash-sales');
+  salesEl.innerHTML=SALES_STAGES.map(s=>{
+    const ds=deals.filter(d=>(d.deal_type||'Sales')==='Sales'&&d.stage===s);
+    const val=ds.reduce((sum,d)=>sum+(+d.value||0),0);
+    return `<div class="dash-stage-row" onclick="switchTabByName('pipeline')">
+      <span class="dash-stage-label">${s}</span>
+      <div style="display:flex;gap:12px;align-items:center">
+        ${val?'<span style="font-size:12px;color:#0066cc">'+fmt(val)+'</span>':''}
+        <span class="dash-stage-count">${ds.length} deal${ds.length!==1?'s':''}</span>
+      </div>
+    </div>`;
+  }).join('');
+  // Leasing pipeline
+  const leaseEl=document.getElementById('dash-leasing');
+  leaseEl.innerHTML=LEASE_STAGES.map(s=>{
+    const ds=deals.filter(d=>d.deal_type==='Leasing'&&d.stage===s);
+    return `<div class="dash-stage-row" onclick="switchTabByName('pipeline')">
+      <span class="dash-stage-label">${s}</span>
+      <span class="dash-stage-count">${ds.length} deal${ds.length!==1?'s':''}</span>
+    </div>`;
+  }).join('');
+  // To dos on dashboard — open tasks only, high priority first
+  renderDashTodos();
+}
+
+function renderDashTodos(){
+  const el=document.getElementById('dash-todos');
+  const open=todos.filter(t=>!t.done).sort((a,b)=>{
+    const p={High:0,Normal:1,Low:2};
+    return (p[a.priority]||1)-(p[b.priority]||1);
+  });
+  if(!open.length){el.innerHTML='<div class="empty" style="padding:1rem">No open tasks 🎉</div>';return;}
+  el.innerHTML=open.map(t=>todoHtml(t,true)).join('');
+}
+
+function todoHtml(t, compact=false){
+  const d=t.deal_id?deals.find(x=>x.id===t.deal_id):null;
+  const due=t.due_date?new Date(t.due_date+'T12:00:00'):null;
+  const overdue=due&&due<new Date()&&!t.done;
+  const dueStr=due?due.toLocaleDateString('en-US',{month:'short',day:'numeric'}):'';
+  const priClass=t.priority==='High'?'pri-high':t.priority==='Low'?'pri-low':'pri-normal';
+  return `<div class="todo-item${t.done?' done-item':''}" onclick="openTodoModal('${t.id}')">
+    <div class="todo-check${t.done?' checked':''}" onclick="event.stopPropagation();toggleTodo('${t.id}')">${t.done?'✓':''}</div>
+    <div class="todo-text-wrap">
+      <div class="todo-title${t.done?' done':''}">${t.text}</div>
+      <div class="todo-meta">
+        <span class="${priClass}">${t.priority}</span>
+        ${dueStr?'<span style="margin-left:8px;'+(overdue?'color:#cc0000;font-weight:500':'')+'">'+( overdue?'Overdue · ':'')+dueStr+'</span>':''}
+        ${d?'<span style="margin-left:8px;color:#0066cc">'+d.name+'</span>':''}
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderTodos(){
+  const filter=document.getElementById('todo-filter').value;
+  const priFilter=document.getElementById('todo-priority-filter').value;
+  let filtered=todos.filter(t=>{
+    if(filter==='active') return !t.done;
+    if(filter==='done') return t.done;
+    return true;
+  });
+  if(priFilter) filtered=filtered.filter(t=>t.priority===priFilter);
+  filtered.sort((a,b)=>{
+    if(a.done!==b.done) return a.done?1:-1;
+    const p={High:0,Normal:1,Low:2};
+    if((p[a.priority]||1)!==(p[b.priority]||1)) return (p[a.priority]||1)-(p[b.priority]||1);
+    if(a.due_date&&b.due_date) return new Date(a.due_date)-new Date(b.due_date);
+    return 0;
+  });
+  const list=document.getElementById('todo-list');
+  if(!filtered.length){list.innerHTML='<div class="empty">No tasks here.</div>';return;}
+  list.innerHTML=filtered.map(t=>todoHtml(t)).join('');
+}
+
+function switchTabByName(name){
+  const tabs=document.querySelectorAll('.tab');
+  tabs.forEach(t=>{
+    if(t.getAttribute('onclick')&&t.getAttribute('onclick').includes("'"+name+"'")){
+      t.click();
+    }
+  });
+}
+
+async function toggleTodo(id){
+  const t=todos.find(x=>x.id===id);if(!t)return;
+  const updated={...t,done:!t.done};
+  await sb.from('todos').update({done:updated.done}).eq('id',id);
+  todos=todos.map(x=>x.id===id?updated:x);
+  if(document.getElementById('view-dashboard').classList.contains('active'))renderDashTodos();
+  if(document.getElementById('view-todos').classList.contains('active'))renderTodos();
+}
+
+function openTodoModal(id){
+  const sel=document.getElementById('todo-deal');
+  sel.innerHTML='<option value="">— none —</option>'+deals.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+  if(id){
+    const t=todos.find(x=>x.id===id);
+    document.getElementById('todo-modal-title').textContent='Edit task';
+    document.getElementById('todo-id').value=t.id;
+    document.getElementById('todo-text').value=t.text;
+    document.getElementById('todo-priority').value=t.priority||'Normal';
+    document.getElementById('todo-due').value=t.due_date||'';
+    document.getElementById('todo-deal').value=t.deal_id||'';
+    document.getElementById('todo-delete-btn').style.display='inline-block';
+  }else{
+    document.getElementById('todo-modal-title').textContent='Add task';
+    ['todo-id','todo-text','todo-due'].forEach(f=>document.getElementById(f).value='');
+    document.getElementById('todo-priority').value='Normal';
+    document.getElementById('todo-deal').value='';
+    document.getElementById('todo-delete-btn').style.display='none';
+  }
+  document.getElementById('todo-modal').classList.add('open');
+}
+async function saveTodo(){
+  const id=document.getElementById('todo-id').value;
+  const obj={id:id||uid(),text:document.getElementById('todo-text').value,priority:document.getElementById('todo-priority').value,due_date:document.getElementById('todo-due').value||null,deal_id:document.getElementById('todo-deal').value||null,done:false};
+  if(!obj.text){alert('Task text is required.');return;}
+  if(id){
+    const existing=todos.find(t=>t.id===id);
+    obj.done=existing?existing.done:false;
+    await sb.from('todos').update(obj).eq('id',id);
+    todos=todos.map(t=>t.id===id?obj:t);
+  }else{
+    await sb.from('todos').insert(obj);
+    todos.push(obj);
+  }
+  closeModal('todo-modal');
+  if(document.getElementById('view-dashboard').classList.contains('active'))renderDashTodos();
+  if(document.getElementById('view-todos').classList.contains('active'))renderTodos();
+  showToast('Task saved.');
+}
+async function deleteTodo(){
+  if(!confirm('Delete this task?'))return;
+  const id=document.getElementById('todo-id').value;
+  await sb.from('todos').delete().eq('id',id);
+  todos=todos.filter(t=>t.id!==id);
+  closeModal('todo-modal');
+  if(document.getElementById('view-dashboard').classList.contains('active'))renderDashTodos();
+  if(document.getElementById('view-todos').classList.contains('active'))renderTodos();
+  showToast('Task deleted.');
 }
 
 function renderPipeline(){
