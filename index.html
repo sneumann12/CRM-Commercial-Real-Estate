@@ -16,6 +16,9 @@
   --text2:#5A6E87;
   --text3:#8FA3B8;
   --accent:#2D7DD2;
+  --gold:#C9963A;
+  --gold-light:#FEF5E6;
+  --gold-dark:#A67A28;
   --accent-light:#E8F1FB;
   --accent-dark:#1A5FA8;
   --green:#1A7F4B;
@@ -50,14 +53,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .deal-card:hover{border-color:var(--accent);background:var(--surface);box-shadow:var(--shadow)}
 .deal-name{font-size:13px;font-weight:500;color:var(--text)}
 .deal-meta{font-size:11px;color:var(--text3);margin-top:3px}
-.deal-val{font-size:12px;color:var(--accent);margin-top:5px;font-weight:600}
+.deal-val{font-size:12px;color:var(--gold);margin-top:5px;font-weight:600}
 .btn{padding:7px 15px;font-size:13px;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);transition:all .15s;font-weight:400}
 .btn:hover{background:var(--surface2);border-color:var(--border-hover)}
 .btn-primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:500}
 .btn-primary:hover{background:var(--accent-dark);border-color:var(--accent-dark)}
+.btn-cta{background:var(--gold);color:#fff;border-color:var(--gold);font-weight:500}
+.btn-cta:hover{background:var(--gold-dark);border-color:var(--gold-dark)}
 .btn-danger{color:var(--red);border-color:#FECACA}
 .btn-danger:hover{background:var(--red-light)}
 .btn-sm{padding:5px 11px;font-size:12px}
+.btn-gold{background:var(--gold);color:#fff;border-color:var(--gold)}
+.btn-gold:hover{background:var(--gold-dark);border-color:var(--gold-dark)}
 .btn-green{background:var(--green);color:#fff;border-color:var(--green)}
 .btn-green:hover{background:#145c32}
 input,select,textarea{width:100%;padding:8px 11px;font-size:13px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-family:inherit;transition:border-color .15s}
@@ -78,6 +85,7 @@ textarea{resize:vertical;min-height:70px}
 .stat-label{font-size:11px;color:var(--text3);margin-bottom:5px;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
 .stat-val{font-size:22px;font-weight:600;color:var(--text)}
 .stat-val.accent{color:var(--accent)}
+.stat-val.gold-val{color:var(--gold)}
 .stat-val.green{color:var(--green)}
 .search-row{display:flex;gap:8px;margin-bottom:1.25rem;flex-wrap:wrap}
 .search-row input{flex:1;min-width:160px}
@@ -179,9 +187,9 @@ tr:hover td{background:var(--accent-light);cursor:pointer}
       <div class="section-label" style="font-size:11px">Pipeline snapshot</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem">
         <div class="stat"><div class="stat-label">Total deals</div><div class="stat-val" id="dash-total">—</div></div>
-        <div class="stat"><div class="stat-label">Pipeline value</div><div class="stat-val accent" id="dash-val">—</div></div>
+        <div class="stat" style="border-top-color:var(--gold)"><div class="stat-label">Pipeline value</div><div class="stat-val gold-val" id="dash-val">—</div></div>
         <div class="stat"><div class="stat-label">Active deals</div><div class="stat-val" id="dash-active">—</div></div>
-        <div class="stat"><div class="stat-label">Commissions due</div><div class="stat-val green" id="dash-comm">—</div></div>
+        <div class="stat" style="border-top-color:var(--gold)"><div class="stat-label">Commissions due</div><div class="stat-val gold-val" id="dash-comm">—</div></div>
       </div>
       <div class="section-label" style="font-size:11px">Sales pipeline</div>
       <div id="dash-sales" style="margin-bottom:1.5rem"></div>
@@ -192,7 +200,7 @@ tr:hover td{background:var(--accent-light);cursor:pointer}
     <div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <div class="section-label" style="font-size:11px">To do</div>
-        <button class="btn btn-sm btn-primary" onclick="openTodoModal()">+ Add task</button>
+        <button class="btn btn-sm btn-cta" onclick="openTodoModal()">+ Add task</button>
       </div>
       <div id="dash-todos"></div>
     </div>
@@ -204,11 +212,11 @@ tr:hover td{background:var(--accent-light);cursor:pointer}
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;gap:8px">
     <div class="stats" style="flex:1;margin-bottom:0">
       <div class="stat"><div class="stat-label">Total deals</div><div class="stat-val" id="stat-total">—</div></div>
-      <div class="stat"><div class="stat-label">Pipeline value</div><div class="stat-val" id="stat-val">—</div></div>
+      <div class="stat" style="border-top-color:var(--gold)"><div class="stat-label">Pipeline value</div><div class="stat-val gold-val" id="stat-val">—</div></div>
       <div class="stat"><div class="stat-label">Active</div><div class="stat-val" id="stat-active">—</div></div>
       <div class="stat"><div class="stat-label">Closed / Executed</div><div class="stat-val" id="stat-closed">—</div></div>
     </div>
-    <button class="btn btn-primary" onclick="openDealModal()">+ Add deal</button>
+    <button class="btn btn-cta" onclick="openDealModal()">+ Add deal</button>
   </div>
   <div class="pipeline-toggle">
     <button class="ptab active" onclick="switchPipeline('sales',this)">Sales</button>
@@ -236,7 +244,7 @@ tr:hover td{background:var(--accent-light);cursor:pointer}
         <option>High</option><option>Normal</option><option>Low</option>
       </select>
     </div>
-    <button class="btn btn-primary" onclick="openTodoModal()">+ Add task</button>
+    <button class="btn btn-cta" onclick="openTodoModal()">+ Add task</button>
   </div>
   <div id="todo-list"></div>
 </div>
@@ -245,7 +253,7 @@ tr:hover td{background:var(--accent-light);cursor:pointer}
 <div class="view" id="view-clients">
   <div class="search-row">
     <input type="text" placeholder="Search clients..." id="client-search" oninput="renderClients()">
-    <button class="btn btn-primary" onclick="openClientModal()">+ Add client</button>
+    <button class="btn btn-cta" onclick="openClientModal()">+ Add client</button>
   </div>
   <div id="client-list"><div class="loading">Loading...</div></div>
 </div>
@@ -258,7 +266,7 @@ tr:hover td{background:var(--accent-light);cursor:pointer}
       <option value="">All types</option>
       <option>Client</option><option>Broker</option><option>Lender</option><option>Vendor</option><option>Investor</option><option>Attorney</option><option>Other</option>
     </select>
-    <button class="btn btn-primary" onclick="openContactModal()">+ Add contact</button>
+    <button class="btn btn-cta" onclick="openContactModal()">+ Add contact</button>
   </div>
   <div id="contact-list"><div class="loading">Loading...</div></div>
 </div>
@@ -267,7 +275,7 @@ tr:hover td{background:var(--accent-light);cursor:pointer}
 <div class="view" id="view-leads">
   <div class="search-row">
     <input type="text" placeholder="Search leads..." id="lead-search" oninput="renderLeads()">
-    <button class="btn btn-primary" onclick="openLeadModal()">+ Add lead</button>
+    <button class="btn btn-cta" onclick="openLeadModal()">+ Add lead</button>
   </div>
   <div style="font-size:12px;color:var(--text3);margin-bottom:1rem">Prospects not yet in the active pipeline. Hit "→ Deal" to promote when ready.</div>
   <div class="table-wrap">
@@ -281,7 +289,7 @@ tr:hover td{background:var(--accent-light);cursor:pointer}
   <div class="search-row">
     <input type="text" placeholder="Search..." id="om-search" oninput="renderOffMarket()">
     <select id="om-submarket-filter" onchange="renderOffMarket()" style="width:auto"><option value="">All submarkets</option></select>
-    <button class="btn btn-primary" onclick="openOMModal()">+ Add property</button>
+    <button class="btn btn-cta" onclick="openOMModal()">+ Add property</button>
   </div>
   <div class="table-wrap">
     <table><thead><tr><th>Address</th><th>Submarket</th><th>Type</th><th>Size (SF)</th><th>Est. Value</th><th>Owner</th><th>Last Contact</th><th>Notes</th></tr></thead>
@@ -298,7 +306,7 @@ tr:hover td{background:var(--accent-light);cursor:pointer}
       <div class="field"><label>Recipients (from Contacts)</label><div id="email-recipients" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px"></div></div>
       <div style="display:flex;gap:8px;margin-top:.5rem">
         <button class="btn" onclick="previewEmail()">Preview</button>
-        <button class="btn btn-primary" onclick="sendBlast()">Send blast</button>
+        <button class="btn btn-cta" onclick="sendBlast()">Send blast</button>
       </div>
     </div>
     <div>
@@ -318,7 +326,7 @@ tr:hover td{background:var(--accent-light);cursor:pointer}
       <option value="">All statuses</option>
       <option>Expected</option><option>Partial</option><option>Received</option>
     </select>
-    <button class="btn btn-primary" onclick="openCommModal()">+ Add commission</button>
+    <button class="btn btn-cta" onclick="openCommModal()">+ Add commission</button>
   </div>
   <div id="comm-list"></div>
 </div>
@@ -618,7 +626,7 @@ function renderDashboard(){
     return `<div class="dash-stage-row" onclick="switchTabByName('pipeline')">
       <span class="dash-stage-label">${s}</span>
       <div style="display:flex;gap:12px;align-items:center">
-        ${val?'<span style="font-size:12px;color:var(--accent)">'+fmt(val)+'</span>':''}
+        ${val?'<span style="font-size:12px;color:var(--gold);font-weight:600">'+fmt(val)+'</span>':''}
         <span class="dash-stage-count">${ds.length} deal${ds.length!==1?'s':''}</span>
       </div>
     </div>`;
@@ -677,7 +685,7 @@ function todoHtml(t, compact=false){
     <div class="todo-check${t.done?' checked':''}" onclick="event.stopPropagation();toggleTodo('${t.id}')">${t.done?'✓':''}</div>
     <div class="todo-text-wrap">
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-        ${isFollowUp?'<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--amber-light);color:var(--amber);font-weight:500">Follow Up</span>':''}
+        ${isFollowUp?'<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--gold-light);color:var(--gold);font-weight:600">Follow Up</span>':''}
         <div class="todo-title${t.done?' done':''}">${t.text}</div>
       </div>
       <div class="todo-meta">
@@ -834,7 +842,7 @@ function renderClients(){
       return `<div class="client-deal-row" onclick="event.stopPropagation();openDealModal('${d.id}')">
         <div><div style="font-size:13px;font-weight:500">${d.name}</div><div style="font-size:11px;color:var(--text3)">${d.type||''}</div></div>
         <div style="display:flex;gap:6px;align-items:center">
-          ${d.value?'<span style="font-size:12px;color:var(--accent);font-weight:500">'+fmt(d.value)+'</span>':''}
+          ${d.value?'<span style="font-size:12px;color:var(--gold);font-weight:600">'+fmt(d.value)+'</span>':''}
           <span class="stage-pill ${isLease?'stage-pill-lease':''}">${d.stage}</span>
         </div>
       </div>`;
@@ -979,8 +987,8 @@ function renderCommissions(){
   const totalReceived=commissions.filter(c=>c.status==='Received').reduce((s,c)=>s+(c.sale*c.rate/100)*((c.split||100)/100),0);
   document.getElementById('comm-stats').innerHTML=`
     <div class="stat"><div class="stat-label">Total</div><div class="stat-val">${commissions.length}</div></div>
-    <div class="stat"><div class="stat-label">Gross pipeline</div><div class="stat-val">${fmt(totalGross)}</div></div>
-    <div class="stat"><div class="stat-label">Received</div><div class="stat-val" style="color:var(--green)">${fmt(totalReceived)}</div></div>`;
+    <div class="stat" style="border-top-color:var(--gold)"><div class="stat-label">Gross pipeline</div><div class="stat-val gold-val">${fmt(totalGross)}</div></div>
+    <div class="stat" style="border-top-color:var(--green)"><div class="stat-label">Received</div><div class="stat-val" style="color:var(--green)">${fmt(totalReceived)}</div></div>`;
   const list=document.getElementById('comm-list');
   if(!filtered.length){list.innerHTML='<div class="empty">No commissions yet.</div>';return;}
   list.innerHTML=filtered.map(c=>{
@@ -993,7 +1001,7 @@ function renderCommissions(){
         <div style="font-size:11px;color:var(--text3);margin-top:2px">${c.rate}% · ${c.split||100}% side${dt?' · '+dt:''}</div>
         ${c.notes?'<div style="font-size:11px;color:var(--text3);margin-top:2px">'+c.notes+'</div>':''}</div>
         <div style="text-align:right;flex-shrink:0;margin-left:12px">
-          <div style="font-size:15px;font-weight:500">${fmt(gross)}</div>
+          <div style="font-size:15px;font-weight:600;color:var(--gold)">${fmt(gross)}</div>
           <span class="status-${c.status}">${c.status}</span>
         </div>
       </div>
@@ -1007,7 +1015,7 @@ function calcComm(){
   const split=+document.getElementById('comm-split').value||100;
   const gross=sale*rate/100;const net=gross*(split/100);
   document.getElementById('comm-calc').innerHTML=sale&&rate
-    ?`Gross: <strong>${fmt(gross)}</strong> &nbsp;·&nbsp; Your side (${split}%): <strong>${fmt(net)}</strong>`
+    ?`Gross: <strong style="color:var(--gold)">${fmt(gross)}</strong> &nbsp;·&nbsp; Your side (${split}%): <strong style="color:var(--gold)">${fmt(net)}</strong>`
     :'Enter value and rate to calculate.';
 }
 
