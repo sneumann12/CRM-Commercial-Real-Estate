@@ -6,123 +6,154 @@
 <title>CRE CRM – Stefan Neumann</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
+:root{
+  --bg:#EEF2F7;
+  --surface:#fff;
+  --surface2:#F4F7FB;
+  --border:#D8E2EF;
+  --border-hover:#B8C8E0;
+  --text:#1B2A3D;
+  --text2:#5A6E87;
+  --text3:#8FA3B8;
+  --accent:#2D7DD2;
+  --accent-light:#E8F1FB;
+  --accent-dark:#1A5FA8;
+  --green:#1A7F4B;
+  --green-light:#E6F4ED;
+  --red:#C53030;
+  --red-light:#FEF0F0;
+  --amber:#996600;
+  --amber-light:#FFF8E6;
+  --radius:10px;
+  --radius-sm:7px;
+  --shadow:0 1px 3px rgba(45,125,210,.08),0 1px 2px rgba(27,42,61,.06);
+  --shadow-md:0 4px 12px rgba(45,125,210,.1),0 2px 4px rgba(27,42,61,.06);
+}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f3;color:#1a1a1a;min-height:100vh}
-.topbar{background:#fff;border-bottom:1px solid #e5e5e3;padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;height:52px;position:sticky;top:0;z-index:50}
-.logo{font-size:15px;font-weight:500}
-.tab-bar{display:flex;gap:2px}
-.tab{padding:8px 12px;font-size:13px;cursor:pointer;border:none;background:none;color:#666;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
-.tab.active{color:#1a1a1a;font-weight:500;border-bottom:2px solid #1a1a1a}
-.main{padding:1.5rem;max-width:1300px;margin:0 auto}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:50;box-shadow:var(--shadow)}
+.logo{font-size:15px;font-weight:600;color:var(--text);letter-spacing:-.01em}
+.logo span{color:var(--accent)}
+.tab-bar{display:flex;gap:1px}
+.tab{padding:8px 13px;font-size:13px;cursor:pointer;border:none;background:none;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;transition:color .15s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);font-weight:500;border-bottom:2px solid var(--accent)}
+.main{padding:1.5rem;max-width:1320px;margin:0 auto}
 .view{display:none}.view.active{display:block}
-.pipeline-toggle{display:flex;gap:4px;margin-bottom:1rem;background:#f0f0ee;border-radius:8px;padding:3px;width:fit-content}
-.ptab{padding:5px 16px;font-size:13px;cursor:pointer;border:none;background:transparent;color:#666;border-radius:6px}
-.ptab.active{background:#fff;color:#1a1a1a;font-weight:500;box-shadow:0 1px 3px rgba(0,0,0,.1)}
-.stage-cols{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;align-items:start}
-.stage-col{background:#fff;border:1px solid #e5e5e3;border-radius:10px;padding:10px}
-.stage-label{font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
-.deal-card{background:#f9f9f8;border:1px solid #e5e5e3;border-radius:8px;padding:10px;margin-bottom:8px;cursor:pointer}
-.deal-card:hover{border-color:#ccc;background:#fff}
-.deal-name{font-size:13px;font-weight:500}
-.deal-meta{font-size:11px;color:#888;margin-top:3px}
-.deal-val{font-size:12px;color:#0066cc;margin-top:4px;font-weight:500}
-.btn{padding:7px 14px;font-size:13px;cursor:pointer;border:1px solid #d5d5d3;border-radius:8px;background:#fff;color:#1a1a1a}
-.btn:hover{background:#f5f5f3}
-.btn-primary{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
-.btn-primary:hover{background:#333}
-.btn-danger{color:#cc0000;border-color:#ffcccc}
-.btn-danger:hover{background:#fff5f5}
-.btn-sm{padding:5px 10px;font-size:12px}
-.btn-green{background:#1a7340;color:#fff;border-color:#1a7340}
+.pipeline-toggle{display:flex;gap:3px;margin-bottom:1rem;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:3px;width:fit-content}
+.ptab{padding:5px 18px;font-size:13px;cursor:pointer;border:none;background:transparent;color:var(--text2);border-radius:5px;transition:all .15s}
+.ptab.active{background:var(--surface);color:var(--accent);font-weight:500;box-shadow:var(--shadow)}
+.stage-cols{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;align-items:start}
+.stage-col{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;box-shadow:var(--shadow)}
+.stage-label{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.deal-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:all .15s}
+.deal-card:hover{border-color:var(--accent);background:var(--surface);box-shadow:var(--shadow)}
+.deal-name{font-size:13px;font-weight:500;color:var(--text)}
+.deal-meta{font-size:11px;color:var(--text3);margin-top:3px}
+.deal-val{font-size:12px;color:var(--accent);margin-top:5px;font-weight:600}
+.btn{padding:7px 15px;font-size:13px;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);transition:all .15s;font-weight:400}
+.btn:hover{background:var(--surface2);border-color:var(--border-hover)}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:500}
+.btn-primary:hover{background:var(--accent-dark);border-color:var(--accent-dark)}
+.btn-danger{color:var(--red);border-color:#FECACA}
+.btn-danger:hover{background:var(--red-light)}
+.btn-sm{padding:5px 11px;font-size:12px}
+.btn-green{background:var(--green);color:#fff;border-color:var(--green)}
 .btn-green:hover{background:#145c32}
-input,select,textarea{width:100%;padding:7px 10px;font-size:13px;border:1px solid #d5d5d3;border-radius:8px;background:#fff;color:#1a1a1a;font-family:inherit}
-input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
+input,select,textarea{width:100%;padding:8px 11px;font-size:13px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-family:inherit;transition:border-color .15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(45,125,210,.12)}
 textarea{resize:vertical;min-height:70px}
-.field{margin-bottom:12px}
-.field label{display:block;font-size:12px;color:#666;margin-bottom:4px}
-.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:flex-start;justify-content:center;padding-top:40px;overflow-y:auto}
+.field{margin-bottom:13px}
+.field label{display:block;font-size:12px;color:var(--text2);margin-bottom:5px;font-weight:500}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(27,42,61,.45);z-index:100;align-items:flex-start;justify-content:center;padding-top:40px;overflow-y:auto}
 .modal-bg.open{display:flex}
-.modal{background:#fff;border:1px solid #e5e5e3;border-radius:12px;padding:1.25rem;width:500px;max-width:95vw;max-height:88vh;overflow-y:auto;margin:auto}
-.modal-title{font-size:16px;font-weight:500;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center}
-.close-btn{background:none;border:none;cursor:pointer;font-size:20px;color:#888;line-height:1}
-.row{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:1rem}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1rem}
-.stat{background:#fff;border:1px solid #e5e5e3;border-radius:8px;padding:10px}
-.stat-label{font-size:11px;color:#888;margin-bottom:3px}
-.stat-val{font-size:18px;font-weight:500}
-.search-row{display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.5rem;width:500px;max-width:95vw;max-height:88vh;overflow-y:auto;margin:auto;box-shadow:var(--shadow-md)}
+.modal-title{font-size:16px;font-weight:600;margin-bottom:1.25rem;display:flex;justify-content:space-between;align-items:center;color:var(--text)}
+.close-btn{background:none;border:none;cursor:pointer;font-size:20px;color:var(--text3);line-height:1;transition:color .15s}
+.close-btn:hover{color:var(--text)}
+.row{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.25rem}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);border-top:3px solid var(--accent)}
+.stat-label{font-size:11px;color:var(--text3);margin-bottom:5px;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+.stat-val{font-size:22px;font-weight:600;color:var(--text)}
+.stat-val.accent{color:var(--accent)}
+.stat-val.green{color:var(--green)}
+.search-row{display:flex;gap:8px;margin-bottom:1.25rem;flex-wrap:wrap}
 .search-row input{flex:1;min-width:160px}
-.empty{text-align:center;padding:2rem;color:#888;font-size:13px}
-.badge{display:inline-block;font-size:11px;padding:2px 6px;border-radius:6px;margin-left:4px;background:#f5f5f3;color:#888}
-.client-card{background:#fff;border:1px solid #e5e5e3;border-radius:10px;padding:1rem;margin-bottom:10px;cursor:pointer}
-.client-card:hover{border-color:#ccc}
-.client-name{font-size:15px;font-weight:500}
-.client-meta{font-size:12px;color:#888;margin-top:2px}
-.client-deals{margin-top:10px;padding-top:10px;border-top:1px solid #f0f0ee}
-.client-deal-row{display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:6px;margin-bottom:4px;background:#f9f9f8;cursor:pointer}
-.client-deal-row:hover{background:#f0f0ee}
-.stage-pill{font-size:11px;padding:2px 8px;border-radius:6px;background:#e8f0fe;color:#0066cc;white-space:nowrap}
-.stage-pill-lease{background:#e6f4ea;color:#1a7340}
-.contact-row{background:#fff;border:1px solid #e5e5e3;border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:8px}
-.contact-row:hover{border-color:#ccc}
-.avatar{width:36px;height:36px;border-radius:50%;background:#e8f0fe;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:#0066cc;flex-shrink:0}
+.empty{text-align:center;padding:3rem;color:var(--text3);font-size:13px}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;margin-left:6px;background:var(--accent-light);color:var(--accent);font-weight:500}
+.client-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:10px;cursor:pointer;box-shadow:var(--shadow);transition:all .15s}
+.client-card:hover{border-color:var(--accent);box-shadow:var(--shadow-md)}
+.client-name{font-size:15px;font-weight:600;color:var(--text)}
+.client-meta{font-size:12px;color:var(--text3);margin-top:3px}
+.client-deals{margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+.client-deal-row{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-radius:var(--radius-sm);margin-bottom:5px;background:var(--surface2);cursor:pointer;transition:background .15s}
+.client-deal-row:hover{background:var(--accent-light)}
+.stage-pill{font-size:11px;padding:2px 9px;border-radius:20px;background:var(--accent-light);color:var(--accent);white-space:nowrap;font-weight:500}
+.stage-pill-lease{background:var(--green-light);color:var(--green)}
+.contact-row{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 16px;display:flex;align-items:center;gap:13px;cursor:pointer;margin-bottom:8px;box-shadow:var(--shadow);transition:all .15s}
+.contact-row:hover{border-color:var(--accent);box-shadow:var(--shadow-md)}
+.avatar{width:38px;height:38px;border-radius:50%;background:var(--accent-light);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--accent);flex-shrink:0}
 .contact-info{flex:1;min-width:0}
-.contact-name{font-size:14px;font-weight:500}
-.contact-detail{font-size:12px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.type-pill{font-size:11px;padding:2px 8px;border-radius:6px;background:#f0f0ee;color:#555;flex-shrink:0}
-.note-card{background:#f9f9f8;border:1px solid #e5e5e3;border-radius:8px;padding:10px 12px;margin-bottom:8px}
-.note-meta{font-size:11px;color:#888;margin-bottom:3px}
-.note-text{font-size:13px;line-height:1.5}
-.deal-notes-section{margin-top:1rem;padding-top:1rem;border-top:1px solid #e5e5e3}
-.deal-notes-title{font-size:12px;font-weight:500;color:#666;margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em}
-.tag-pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;margin:2px;cursor:pointer;border:1px solid #d5d5d3;color:#666}
-.tag-pill.sel{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
-.comm-row{background:#fff;border:1px solid #e5e5e3;border-radius:8px;padding:12px 14px;margin-bottom:8px;cursor:pointer}
-.comm-row:hover{border-color:#ccc}
-.status-Expected{background:#fff8e6;color:#996600;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:500}
-.status-Received{background:#e6f4ea;color:#1a7340;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:500}
-.status-Partial{background:#e8f0fe;color:#0066cc;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:500}
-.comm-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1rem}
-.email-preview{background:#f9f9f8;border:1px solid #e5e5e3;border-radius:8px;padding:12px;font-size:13px;line-height:1.6;white-space:pre-wrap;min-height:80px}
-.export-card{background:#fff;border:1px solid #e5e5e3;border-radius:10px;padding:1rem;margin-bottom:12px}
-.export-card h3{font-size:14px;font-weight:500;margin-bottom:4px}
-.export-card p{font-size:12px;color:#888;margin-bottom:10px}
-.table-wrap{overflow-x:auto}
+.contact-name{font-size:14px;font-weight:500;color:var(--text)}
+.contact-detail{font-size:12px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.type-pill{font-size:11px;padding:2px 9px;border-radius:20px;background:var(--surface2);color:var(--text2);flex-shrink:0;border:1px solid var(--border);font-weight:500}
+.note-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:11px 14px;margin-bottom:8px;border-left:3px solid var(--accent)}
+.note-meta{font-size:11px;color:var(--text3);margin-bottom:4px}
+.note-text{font-size:13px;line-height:1.55;color:var(--text)}
+.deal-notes-section{margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)}
+.deal-notes-title{font-size:11px;font-weight:600;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em}
+.tag-pill{display:inline-block;font-size:11px;padding:3px 10px;border-radius:20px;margin:2px;cursor:pointer;border:1px solid var(--border);color:var(--text2);transition:all .15s}
+.tag-pill.sel{background:var(--accent);color:#fff;border-color:var(--accent)}
+.comm-row{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 16px;margin-bottom:8px;cursor:pointer;box-shadow:var(--shadow);transition:all .15s}
+.comm-row:hover{border-color:var(--accent);box-shadow:var(--shadow-md)}
+.status-Expected{background:var(--amber-light);color:var(--amber);padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600}
+.status-Received{background:var(--green-light);color:var(--green);padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600}
+.status-Partial{background:var(--accent-light);color:var(--accent);padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600}
+.comm-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.25rem}
+.email-preview{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:13px;font-size:13px;line-height:1.6;white-space:pre-wrap;min-height:80px;color:var(--text)}
+.export-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:10px;box-shadow:var(--shadow)}
+.export-card h3{font-size:14px;font-weight:600;margin-bottom:4px;color:var(--text)}
+.export-card p{font-size:12px;color:var(--text3);margin-bottom:12px}
+.table-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
 table{width:100%;border-collapse:collapse;font-size:13px}
-th{text-align:left;font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:.04em;padding:8px 10px;border-bottom:1px solid #e5e5e3;white-space:nowrap}
-td{padding:10px;border-bottom:1px solid #f0f0ee;vertical-align:top}
-tr:hover td{background:#f9f9f8;cursor:pointer}
-.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:#1a1a1a;color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;z-index:200;opacity:0;transition:opacity .2s}
+th{text-align:left;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--surface2);white-space:nowrap}
+td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:top;color:var(--text)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--accent-light);cursor:pointer}
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--text);color:#fff;padding:10px 18px;border-radius:var(--radius-sm);font-size:13px;z-index:200;opacity:0;transition:opacity .2s;box-shadow:var(--shadow-md)}
 .toast.show{opacity:1}
-.loading{text-align:center;padding:3rem;color:#888;font-size:13px}
-.submarket-pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;background:#f0f0ee;color:#555}
-.todo-item{background:#fff;border:1px solid #e5e5e3;border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;align-items:flex-start;gap:10px;cursor:pointer}
-.todo-item:hover{border-color:#ccc}
-.todo-item.done-item{opacity:.5}
-.todo-check{width:18px;height:18px;border-radius:50%;border:2px solid #d5d5d3;flex-shrink:0;margin-top:1px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px}
-.todo-check.checked{background:#1a1a1a;border-color:#1a1a1a;color:#fff}
+.loading{text-align:center;padding:3rem;color:var(--text3);font-size:13px}
+.submarket-pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+.todo-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:11px 14px;margin-bottom:8px;display:flex;align-items:flex-start;gap:11px;cursor:pointer;box-shadow:var(--shadow);transition:all .15s}
+.todo-item:hover{border-color:var(--accent);box-shadow:var(--shadow-md)}
+.todo-item.done-item{opacity:.45}
+.todo-check{width:19px;height:19px;border-radius:50%;border:2px solid var(--border-hover);flex-shrink:0;margin-top:1px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .15s}
+.todo-check:hover{border-color:var(--accent)}
+.todo-check.checked{background:var(--accent);border-color:var(--accent);color:#fff}
 .todo-text-wrap{flex:1;min-width:0}
-.todo-title{font-size:13px;font-weight:500;color:#1a1a1a}
-.todo-title.done{text-decoration:line-through;color:#aaa}
-.todo-meta{font-size:11px;color:#888;margin-top:2px}
-.pri-high{color:#cc0000;font-weight:500}
-.pri-normal{color:#888}
-.pri-low{color:#aaa}
-.dash-stage-row{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:6px;background:#f9f9f8;margin-bottom:4px;font-size:13px;cursor:pointer}
-.dash-stage-row:hover{background:#f0f0ee}
-.dash-stage-label{color:#666;font-size:12px}
-.dash-stage-count{font-weight:500}
-.promote-btn{font-size:11px;padding:2px 8px;border-radius:6px;border:1px solid #1a7340;color:#1a7340;background:transparent;cursor:pointer;white-space:nowrap}
-.promote-btn:hover{background:#e6f4ea}
-.add-note-row{display:flex;gap:8px;margin-top:8px}
+.todo-title{font-size:13px;font-weight:500;color:var(--text)}
+.todo-title.done{text-decoration:line-through;color:var(--text3)}
+.todo-meta{font-size:11px;color:var(--text3);margin-top:3px}
+.pri-high{color:var(--red);font-weight:600}
+.pri-normal{color:var(--text3)}
+.pri-low{color:var(--text3);opacity:.7}
+.dash-stage-row{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-radius:var(--radius-sm);background:var(--surface2);border:1px solid var(--border);margin-bottom:5px;font-size:13px;cursor:pointer;transition:all .15s}
+.dash-stage-row:hover{background:var(--accent-light);border-color:var(--accent)}
+.dash-stage-label{color:var(--text2);font-size:12px}
+.dash-stage-count{font-weight:600;color:var(--text)}
+.promote-btn{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(--green);color:var(--green);background:transparent;cursor:pointer;transition:all .15s;font-weight:500}
+.promote-btn:hover{background:var(--green-light)}
+.add-note-row{display:flex;gap:8px;margin-top:10px}
 .add-note-row input{flex:1}
+.section-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px}
 </style>
 </head>
 <body>
 
 <div class="topbar">
-  <div class="logo">CRE CRM</div>
+  <div class="logo">CRE <span style="color:var(--accent)">CRM</span></div>
   <div class="tab-bar">
     <button class="tab active" onclick="switchTab('dashboard',this)">Dashboard</button>
     <button class="tab" onclick="switchTab('pipeline',this)">Pipeline</button>
@@ -135,7 +166,7 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
     <button class="tab" onclick="switchTab('commissions',this)">Commissions</button>
     <button class="tab" onclick="switchTab('export',this)">Export</button>
   </div>
-  <div id="sync-status" style="font-size:12px;color:#888">Connecting...</div>
+  <div id="sync-status" style="font-size:12px;color:var(--text3)">Connecting...</div>
 </div>
 
 <div class="main">
@@ -145,22 +176,22 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
     <!-- LEFT: Stats + Pipeline summary -->
     <div>
-      <div style="font-size:13px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Pipeline snapshot</div>
+      <div class="section-label" style="font-size:11px">Pipeline snapshot</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem">
         <div class="stat"><div class="stat-label">Total deals</div><div class="stat-val" id="dash-total">—</div></div>
-        <div class="stat"><div class="stat-label">Pipeline value</div><div class="stat-val" id="dash-val">—</div></div>
+        <div class="stat"><div class="stat-label">Pipeline value</div><div class="stat-val accent" id="dash-val">—</div></div>
         <div class="stat"><div class="stat-label">Active deals</div><div class="stat-val" id="dash-active">—</div></div>
-        <div class="stat"><div class="stat-label">Commissions due</div><div class="stat-val" id="dash-comm" style="color:#1a7340">—</div></div>
+        <div class="stat"><div class="stat-label">Commissions due</div><div class="stat-val green" id="dash-comm">—</div></div>
       </div>
-      <div style="font-size:13px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Sales pipeline</div>
+      <div class="section-label" style="font-size:11px">Sales pipeline</div>
       <div id="dash-sales" style="margin-bottom:1.5rem"></div>
-      <div style="font-size:13px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Leasing pipeline</div>
+      <div class="section-label" style="font-size:11px">Leasing pipeline</div>
       <div id="dash-leasing"></div>
     </div>
     <!-- RIGHT: To Do -->
     <div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <div style="font-size:13px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:.05em">To do</div>
+        <div class="section-label" style="font-size:11px">To do</div>
         <button class="btn btn-sm btn-primary" onclick="openTodoModal()">+ Add task</button>
       </div>
       <div id="dash-todos"></div>
@@ -238,7 +269,7 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
     <input type="text" placeholder="Search leads..." id="lead-search" oninput="renderLeads()">
     <button class="btn btn-primary" onclick="openLeadModal()">+ Add lead</button>
   </div>
-  <div style="font-size:12px;color:#888;margin-bottom:1rem">Prospects not yet in the active pipeline. Hit "→ Deal" to promote when ready.</div>
+  <div style="font-size:12px;color:var(--text3);margin-bottom:1rem">Prospects not yet in the active pipeline. Hit "→ Deal" to promote when ready.</div>
   <div class="table-wrap">
     <table><thead><tr><th>Address</th><th>Owner</th><th>Contact</th><th>Notes</th><th>Added</th><th></th></tr></thead>
     <tbody id="lead-body"></tbody></table>
@@ -271,10 +302,10 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
       </div>
     </div>
     <div>
-      <div style="font-size:12px;color:#888;margin-bottom:6px">Preview</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:6px">Preview</div>
       <div class="email-preview" id="email-preview-box">Preview appears here...</div>
-      <div style="font-size:12px;color:#888;margin-top:1rem;margin-bottom:6px">Sent blasts</div>
-      <div id="sent-list" style="font-size:13px;color:#888">None yet.</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:1rem;margin-bottom:6px">Sent blasts</div>
+      <div id="sent-list" style="font-size:13px;color:var(--text3)">None yet.</div>
     </div>
   </div>
 </div>
@@ -471,7 +502,7 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
       <div class="field"><label>Co-broke split (%)</label><input type="number" id="comm-split" step="1" oninput="calcComm()"></div>
       <div class="field"><label>Close / execution date</label><input type="date" id="comm-date"></div>
     </div>
-    <div style="background:#f9f9f8;border-radius:8px;padding:10px;margin-bottom:12px;font-size:13px" id="comm-calc">Enter value and rate to calculate.</div>
+    <div style="background:var(--surface2);border-radius:8px;padding:10px;margin-bottom:12px;font-size:13px" id="comm-calc">Enter value and rate to calculate.</div>
     <div class="field"><label>Status</label>
       <select id="comm-status"><option>Expected</option><option>Partial</option><option>Received</option></select>
     </div>
@@ -587,7 +618,7 @@ function renderDashboard(){
     return `<div class="dash-stage-row" onclick="switchTabByName('pipeline')">
       <span class="dash-stage-label">${s}</span>
       <div style="display:flex;gap:12px;align-items:center">
-        ${val?'<span style="font-size:12px;color:#0066cc">'+fmt(val)+'</span>':''}
+        ${val?'<span style="font-size:12px;color:var(--accent)">'+fmt(val)+'</span>':''}
         <span class="dash-stage-count">${ds.length} deal${ds.length!==1?'s':''}</span>
       </div>
     </div>`;
@@ -623,13 +654,13 @@ function renderDashTodos(){
   const upcoming=open.filter(t=>{const d=t.due_date?new Date(t.due_date+'T12:00:00'):null;return !d||d>today;});
   let html='';
   if(urgent.length){
-    html+=`<div style="font-size:11px;font-weight:500;color:#cc0000;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Overdue / Due today</div>`;
+    html+=`<div style="font-size:11px;font-weight:500;color:var(--red);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Overdue / Due today</div>`;
     html+=urgent.map(t=>todoHtml(t)).join('');
   }
   if(upcoming.length){
-    if(urgent.length) html+=`<div style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:.04em;margin:10px 0 6px">Upcoming</div>`;
+    if(urgent.length) html+=`<div style="font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin:10px 0 6px">Upcoming</div>`;
     html+=upcoming.slice(0,8).map(t=>todoHtml(t)).join('');
-    if(upcoming.length>8) html+=`<div style="font-size:12px;color:#888;padding:6px 0">+${upcoming.length-8} more — <span style="color:#0066cc;cursor:pointer" onclick="switchTabByName('todos')">view all</span></div>`;
+    if(upcoming.length>8) html+=`<div style="font-size:12px;color:var(--text3);padding:6px 0">+${upcoming.length-8} more — <span style="color:var(--accent);cursor:pointer" onclick="switchTabByName('todos')">view all</span></div>`;
   }
   el.innerHTML=html;
 }
@@ -646,13 +677,13 @@ function todoHtml(t, compact=false){
     <div class="todo-check${t.done?' checked':''}" onclick="event.stopPropagation();toggleTodo('${t.id}')">${t.done?'✓':''}</div>
     <div class="todo-text-wrap">
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-        ${isFollowUp?'<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:#fff8e6;color:#996600;font-weight:500">Follow Up</span>':''}
+        ${isFollowUp?'<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--amber-light);color:var(--amber);font-weight:500">Follow Up</span>':''}
         <div class="todo-title${t.done?' done':''}">${t.text}</div>
       </div>
       <div class="todo-meta">
         <span class="${priClass}">${t.priority}</span>
-        ${dueStr?'<span style="margin-left:8px;'+(overdue?'color:#cc0000;font-weight:500':'')+'">'+( overdue?'Overdue · ':'')+dueStr+'</span>':''}
-        ${d?'<span style="margin-left:8px;color:#0066cc">'+d.name+'</span>':''}
+        ${dueStr?'<span style="margin-left:8px;'+(overdue?'color:var(--red);font-weight:500':'')+'">'+( overdue?'Overdue · ':'')+dueStr+'</span>':''}
+        ${d?'<span style="margin-left:8px;color:var(--accent)">'+d.name+'</span>':''}
         ${c?'<span style="margin-left:8px;color:#555">'+c.name+'</span>':''}
       </div>
     </div>
@@ -774,7 +805,7 @@ function renderPipeline(){
       const cl=clients.find(x=>x.id===d.client_id);
       const noteCount=notes.filter(n=>n.deal_id===d.id).length;
       const card=document.createElement('div');card.className='deal-card';
-      card.innerHTML=`<div class="deal-name">${d.name}</div><div class="deal-meta">${d.type||''}${cl?' · '+cl.name:''}</div>${d.value?'<div class="deal-val">'+fmt(d.value)+'</div>':''}${noteCount?'<div style="font-size:11px;color:#888;margin-top:4px">📝 '+noteCount+' note'+(noteCount>1?'s':'')+'</div>':''}`;
+      card.innerHTML=`<div class="deal-name">${d.name}</div><div class="deal-meta">${d.type||''}${cl?' · '+cl.name:''}</div>${d.value?'<div class="deal-val">'+fmt(d.value)+'</div>':''}${noteCount?'<div style="font-size:11px;color:var(--text3);margin-top:4px">📝 '+noteCount+' note'+(noteCount>1?'s':'')+'</div>':''}`;
       card.onclick=()=>openDealModal(d.id);
       col.appendChild(card);
     });
@@ -794,20 +825,20 @@ function renderClients(){
       <div class="client-deal-row" onclick="event.stopPropagation();openContactModal('${c.id}')">
         <div>
           <div style="font-size:13px;font-weight:500">${c.name}</div>
-          <div style="font-size:11px;color:#888">${[c.title,c.email,c.phone].filter(Boolean).join(' · ')}</div>
+          <div style="font-size:11px;color:var(--text3)">${[c.title,c.email,c.phone].filter(Boolean).join(' · ')}</div>
         </div>
         <span class="type-pill">${c.type||''}</span>
-      </div>`).join(''):'<div style="font-size:12px;color:#aaa;padding:2px 0">No contacts yet</div>';
+      </div>`).join(''):'<div style="font-size:12px;color:var(--text3);padding:2px 0">No contacts yet</div>';
     const dealsHtml=clDeals.length?clDeals.map(d=>{
       const isLease=(d.deal_type||'Sales')==='Leasing';
       return `<div class="client-deal-row" onclick="event.stopPropagation();openDealModal('${d.id}')">
-        <div><div style="font-size:13px;font-weight:500">${d.name}</div><div style="font-size:11px;color:#888">${d.type||''}</div></div>
+        <div><div style="font-size:13px;font-weight:500">${d.name}</div><div style="font-size:11px;color:var(--text3)">${d.type||''}</div></div>
         <div style="display:flex;gap:6px;align-items:center">
-          ${d.value?'<span style="font-size:12px;color:#0066cc;font-weight:500">'+fmt(d.value)+'</span>':''}
+          ${d.value?'<span style="font-size:12px;color:var(--accent);font-weight:500">'+fmt(d.value)+'</span>':''}
           <span class="stage-pill ${isLease?'stage-pill-lease':''}">${d.stage}</span>
         </div>
       </div>`;
-    }).join(''):'<div style="font-size:12px;color:#aaa;padding:2px 0">No deals yet</div>';
+    }).join(''):'<div style="font-size:12px;color:var(--text3);padding:2px 0">No deals yet</div>';
     return `<div class="client-card" onclick="openClientModal('${cl.id}')">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div><div class="client-name">${cl.name}</div>
@@ -818,9 +849,9 @@ function renderClients(){
         </div>
       </div>
       <div class="client-deals">
-        <div style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;margin-top:8px">Contacts</div>
+        <div style="font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;margin-top:8px">Contacts</div>
         ${contactsHtml}
-        <div style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;margin-top:10px">Deals</div>
+        <div style="font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;margin-top:10px">Deals</div>
         ${dealsHtml}
       </div>
     </div>`;
@@ -847,12 +878,12 @@ function renderContacts(){
     <div class="contact-row" onclick="openContactModal('${c.id}')">
       <div class="avatar">${c.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
       <div class="contact-info">
-        <div class="contact-name">${c.name}${c.title?'<span style="font-size:11px;font-weight:400;color:#888;margin-left:6px">'+c.title+'</span>':''}</div>
+        <div class="contact-name">${c.name}${c.title?'<span style="font-size:11px;font-weight:400;color:var(--text3);margin-left:6px">'+c.title+'</span>':''}</div>
         <div class="contact-detail">${[c.company||(linkedClient?linkedClient.name:''),c.email,c.phone].filter(Boolean).join(' · ')}</div>
         <div style="margin-top:3px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          ${linkedClient?'<span style="font-size:11px;color:#0066cc">'+linkedClient.name+'</span>':''}
+          ${linkedClient?'<span style="font-size:11px;color:var(--accent)">'+linkedClient.name+'</span>':''}
           ${c.submarket?'<span class="submarket-pill">'+c.submarket+'</span>':''}
-          ${lcStr?'<span style="font-size:11px;'+(stale?'color:#cc0000;font-weight:500':'color:#888')+'">Last contact: '+lcStr+(stale?' ⚠':'')+'</span>':''}
+          ${lcStr?'<span style="font-size:11px;'+(stale?'color:var(--red);font-weight:500':'color:var(--text3)')+'">Last contact: '+lcStr+(stale?' ⚠':'')+'</span>':''}
         </div>
       </div>
       <span class="type-pill">${c.type||''}</span>
@@ -863,7 +894,7 @@ function renderLeads(){
   const q=(document.getElementById('lead-search').value||'').toLowerCase();
   const filtered=leads.filter(l=>!q||l.address.toLowerCase().includes(q)||(l.owner_name||'').toLowerCase().includes(q));
   const tbody=document.getElementById('lead-body');
-  if(!filtered.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:2rem;color:#888">No leads yet.</td></tr>';return;}
+  if(!filtered.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text3)">No leads yet.</td></tr>';return;}
   tbody.innerHTML=filtered.map(l=>{
     const dt=new Date(l.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
     return `<tr onclick="openLeadModal('${l.id}')">
@@ -871,7 +902,7 @@ function renderLeads(){
       <td>${l.owner_name||'—'}</td>
       <td style="font-size:12px">${l.owner_email||''}${l.owner_email&&l.owner_phone?'<br>':''}${l.owner_phone||''}</td>
       <td style="color:#666;max-width:200px">${l.notes||''}</td>
-      <td style="white-space:nowrap;color:#888">${dt}</td>
+      <td style="white-space:nowrap;color:var(--text3)">${dt}</td>
       <td><button class="promote-btn" onclick="event.stopPropagation();promoteLeadById('${l.id}')">→ Deal</button></td>
     </tr>`;
   }).join('');
@@ -891,7 +922,7 @@ function renderOffMarket(){
     return matchQ&&matchSM;
   });
   const tbody=document.getElementById('om-body');
-  if(!filtered.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:2rem;color:#888">No off market properties yet.</td></tr>';return;}
+  if(!filtered.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text3)">No off market properties yet.</td></tr>';return;}
   tbody.innerHTML=filtered.map(o=>{
     const lc=o.last_contact?new Date(o.last_contact+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—';
     const daysSince=o.last_contact?Math.floor((Date.now()-new Date(o.last_contact+'T12:00:00'))/(1000*60*60*24)):null;
@@ -902,8 +933,8 @@ function renderOffMarket(){
       <td>${o.property_type||'—'}</td>
       <td>${o.size_sf?fmtSF(o.size_sf):'—'}</td>
       <td>${o.est_value?fmt(o.est_value):'—'}</td>
-      <td>${o.owner_name||'—'}${o.owner_phone?'<br><span style="font-size:11px;color:#888">'+o.owner_phone+'</span>':''}</td>
-      <td style="white-space:nowrap;${stale?'color:#cc0000':''}">${lc}${stale?' ⚠':''}${daysSince!==null?'<br><span style="font-size:11px;color:#aaa">'+daysSince+'d ago</span>':''}</td>
+      <td>${o.owner_name||'—'}${o.owner_phone?'<br><span style="font-size:11px;color:var(--text3)">'+o.owner_phone+'</span>':''}</td>
+      <td style="white-space:nowrap;${stale?'color:var(--red)':''}">${lc}${stale?' ⚠':''}${daysSince!==null?'<br><span style="font-size:11px;color:var(--text3)">'+daysSince+'d ago</span>':''}</td>
       <td style="color:#666;max-width:180px;font-size:12px">${o.notes||''}</td>
     </tr>`;
   }).join('');
@@ -937,7 +968,7 @@ function renderSent(){
   if(!sentBlasts.length){el.textContent='None yet.';return;}
   el.innerHTML=sentBlasts.slice(0,5).map(b=>{
     const dt=new Date(b.sent_at).toLocaleDateString('en-US',{month:'short',day:'numeric'});
-    return `<div style="padding:8px 0;border-bottom:1px solid #e5e5e3"><div style="font-weight:500">${b.subject}</div><div style="font-size:11px;color:#888">${dt} · ${(b.recipients||[]).join(', ')}</div></div>`;
+    return `<div style="padding:8px 0;border-bottom:1px solid var(--border)"><div style="font-weight:500">${b.subject}</div><div style="font-size:11px;color:var(--text3)">${dt} · ${(b.recipients||[]).join(', ')}</div></div>`;
   }).join('');
 }
 
@@ -949,7 +980,7 @@ function renderCommissions(){
   document.getElementById('comm-stats').innerHTML=`
     <div class="stat"><div class="stat-label">Total</div><div class="stat-val">${commissions.length}</div></div>
     <div class="stat"><div class="stat-label">Gross pipeline</div><div class="stat-val">${fmt(totalGross)}</div></div>
-    <div class="stat"><div class="stat-label">Received</div><div class="stat-val" style="color:#1a7340">${fmt(totalReceived)}</div></div>`;
+    <div class="stat"><div class="stat-label">Received</div><div class="stat-val" style="color:var(--green)">${fmt(totalReceived)}</div></div>`;
   const list=document.getElementById('comm-list');
   if(!filtered.length){list.innerHTML='<div class="empty">No commissions yet.</div>';return;}
   list.innerHTML=filtered.map(c=>{
@@ -959,8 +990,8 @@ function renderCommissions(){
     return `<div class="comm-row" onclick="openCommModal('${c.id}')">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div><div style="font-size:13px;font-weight:500">${d?d.name:'Unknown deal'}</div>
-        <div style="font-size:11px;color:#888;margin-top:2px">${c.rate}% · ${c.split||100}% side${dt?' · '+dt:''}</div>
-        ${c.notes?'<div style="font-size:11px;color:#888;margin-top:2px">'+c.notes+'</div>':''}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${c.rate}% · ${c.split||100}% side${dt?' · '+dt:''}</div>
+        ${c.notes?'<div style="font-size:11px;color:var(--text3);margin-top:2px">'+c.notes+'</div>':''}</div>
         <div style="text-align:right;flex-shrink:0;margin-left:12px">
           <div style="font-size:15px;font-weight:500">${fmt(gross)}</div>
           <span class="status-${c.status}">${c.status}</span>
@@ -992,7 +1023,7 @@ function updateStageOptions(){
 function renderDealNotes(dealId){
   const dealNotes=notes.filter(n=>n.deal_id===dealId).sort((a,b)=>new Date(b.date)-new Date(a.date));
   const list=document.getElementById('deal-note-list');
-  if(!dealNotes.length){list.innerHTML='<div style="font-size:12px;color:#aaa;padding:4px 0 8px">No notes yet.</div>';return;}
+  if(!dealNotes.length){list.innerHTML='<div style="font-size:12px;color:var(--text3);padding:4px 0 8px">No notes yet.</div>';return;}
   list.innerHTML=dealNotes.map(n=>{
     const dt=new Date(n.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
     return `<div class="note-card"><div class="note-meta">${dt}</div><div class="note-text">${n.text}</div></div>`;
@@ -1083,11 +1114,11 @@ function openClientModal(id){
     const clContacts=contacts.filter(ct=>ct.client_id===id);
     document.getElementById('cl-contacts-section').style.display='block';
     document.getElementById('cl-contact-list').innerHTML=clContacts.length
-      ?clContacts.map(ct=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:#f9f9f8;border-radius:6px;margin-bottom:4px;font-size:13px">
-          <div><strong>${ct.name}</strong>${ct.title?' · '+ct.title:''}<br><span style="font-size:11px;color:#888">${[ct.email,ct.phone].filter(Boolean).join(' · ')}</span></div>
+      ?clContacts.map(ct=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:var(--surface2);border-radius:6px;margin-bottom:4px;font-size:13px">
+          <div><strong>${ct.name}</strong>${ct.title?' · '+ct.title:''}<br><span style="font-size:11px;color:var(--text3)">${[ct.email,ct.phone].filter(Boolean).join(' · ')}</span></div>
           <button class="btn btn-sm" onclick="event.stopPropagation();closeModal('client-modal');openContactModal('${ct.id}')">Edit</button>
         </div>`).join('')
-      :'<div style="font-size:12px;color:#aaa;padding:4px 0">No contacts linked yet.</div>';
+      :'<div style="font-size:12px;color:var(--text3);padding:4px 0">No contacts linked yet.</div>';
   }else{
     document.getElementById('client-modal-title').textContent='Add client';
     ['client-id','cl-name','cl-notes'].forEach(f=>document.getElementById(f).value='');
