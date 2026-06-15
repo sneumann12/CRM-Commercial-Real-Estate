@@ -321,12 +321,7 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
       <div class="field"><label>Email</label><input type="email" id="ct-email"></div>
       <div class="field"><label>Phone</label><input type="tel" id="ct-phone"></div>
     </div>
-    <div class="field"><label>Submarket</label>
-      <select id="ct-submarket">
-        <option value="">— none —</option>
-        <option>Manhattan Beach</option><option>Hermosa Beach</option><option>Redondo Beach</option><option>Torrance</option><option>El Segundo</option><option>Hawthorne</option><option>Inglewood</option><option>Culver City</option><option>Santa Monica</option><option>Venice</option><option>Marina del Rey</option><option>Playa Vista</option><option>Hollywood</option><option>Other</option>
-      </select>
-    </div>
+    <div class="field"><label>Submarket</label><input type="text" id="ct-submarket" placeholder="e.g. Manhattan Beach, South Bay, Westside..."></div>
     <div class="field"><label>Notes</label><textarea id="ct-notes" placeholder="Relationship notes, preferences, how you met..."></textarea></div>
     <div class="row">
       <button class="btn btn-danger" id="contact-delete-btn" onclick="deleteContact()" style="display:none;margin-right:auto">Delete</button>
@@ -364,12 +359,7 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
     <input type="hidden" id="om-id">
     <div class="field"><label>Property address</label><input type="text" id="om-address"></div>
     <div class="grid2">
-      <div class="field"><label>Submarket</label>
-        <select id="om-submarket">
-          <option value="">— select —</option>
-          <option>Manhattan Beach</option><option>Hermosa Beach</option><option>Redondo Beach</option><option>Torrance</option><option>El Segundo</option><option>Hawthorne</option><option>Inglewood</option><option>Culver City</option><option>Santa Monica</option><option>Venice</option><option>Marina del Rey</option><option>Playa Vista</option><option>Hollywood</option><option>Other</option>
-        </select>
-      </div>
+      <div class="field"><label>Submarket</label><input type="text" id="om-submarket" placeholder="e.g. Manhattan Beach, South Bay..."></div>
       <div class="field"><label>Property type</label>
         <select id="om-type"><option>Retail</option><option>Office</option><option>Industrial</option><option>Multifamily</option><option>Mixed-use</option><option>Land</option></select>
       </div>
@@ -770,12 +760,40 @@ function openClientModal(id){
   }
   document.getElementById('client-modal').classList.add('open');
 }
+// Auto-sync any person to contacts table
+async function syncToContacts(name, email, phone, type, company, source){
+  if(!name && !email && !phone) return; // nothing to sync
+  const nameToUse = name || email || phone;
+  // Check if contact with same email already exists
+  const existing = email ? contacts.find(c=>c.email&&c.email.toLowerCase()===email.toLowerCase()) : null;
+  if(existing){
+    // Update existing contact with any new info
+    const updated = {...existing,
+      name: existing.name || nameToUse,
+      phone: existing.phone || phone || '',
+      company: existing.company || company || '',
+      type: existing.type || type || 'Other',
+      notes: existing.notes ? existing.notes : (source ? 'Added via '+source : '')
+    };
+    await sb.from('contacts').update(updated).eq('id', existing.id);
+    contacts = contacts.map(c=>c.id===existing.id ? updated : c);
+  } else {
+    // Create new contact
+    const newContact = {id:uid(), name:nameToUse, email:email||'', phone:phone||'', company:company||'', type:type||'Other', title:'', submarket:'', notes: source ? 'Added via '+source : ''};
+    await sb.from('contacts').insert(newContact);
+    contacts.push(newContact);
+  }
+}
+
 async function saveClient(){
   const id=document.getElementById('client-id').value;
   const obj={id:id||uid(),name:document.getElementById('cl-name').value,type:document.getElementById('cl-type').value,cl_contact:document.getElementById('cl-contact').value,email:document.getElementById('cl-email').value,phone:document.getElementById('cl-phone').value,notes:document.getElementById('cl-notes').value};
   if(!obj.name){alert('Client name is required.');return;}
   if(id){await sb.from('clients').update(obj).eq('id',id);clients=clients.map(c=>c.id===id?obj:c);}
   else{await sb.from('clients').insert(obj);clients.push(obj);}
+  // Sync primary contact name to contacts
+  const contactName = obj.cl_contact || obj.name;
+  await syncToContacts(contactName, obj.email, obj.phone, obj.type, obj.name, 'Clients');
   closeModal('client-modal');renderClients();showToast('Client saved.');
 }
 async function deleteClient(){
@@ -850,6 +868,9 @@ async function saveLead(){
   if(!obj.address){alert('Address is required.');return;}
   if(id){await sb.from('leads').update(obj).eq('id',id);leads=leads.map(l=>l.id===id?obj:l);}
   else{await sb.from('leads').insert(obj);leads.push(obj);}
+  // Sync owner to contacts if name/email/phone provided
+  if(obj.owner_name||obj.owner_email||obj.owner_phone)
+    await syncToContacts(obj.owner_name, obj.owner_email, obj.owner_phone, 'Other', '', 'Leads');
   closeModal('lead-modal');renderLeads();showToast('Lead saved.');
 }
 async function deleteLead(){
@@ -901,6 +922,9 @@ async function saveOM(){
   if(!obj.address){alert('Address is required.');return;}
   if(id){await sb.from('off_market').update(obj).eq('id',id);offMarket=offMarket.map(o=>o.id===id?obj:o);}
   else{await sb.from('off_market').insert(obj);offMarket.push(obj);}
+  // Sync owner to contacts if info provided
+  if(obj.owner_name||obj.owner_email||obj.owner_phone)
+    await syncToContacts(obj.owner_name, obj.owner_email, obj.owner_phone, 'Other', '', 'Off Market');
   closeModal('om-modal');renderOffMarket();showToast('Property saved.');
 }
 async function deleteOM(){
