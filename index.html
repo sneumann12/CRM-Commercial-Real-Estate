@@ -126,7 +126,7 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
   <div class="tab-bar">
     <button class="tab active" onclick="switchTab('dashboard',this)">Dashboard</button>
     <button class="tab" onclick="switchTab('pipeline',this)">Pipeline</button>
-    <button class="tab" onclick="switchTab('todos',this)">To Do</button>
+    <button class="tab" onclick="switchTab('todos',this)">Tasks</button>
     <button class="tab" onclick="switchTab('clients',this)">Clients</button>
     <button class="tab" onclick="switchTab('contacts',this)">Contacts</button>
     <button class="tab" onclick="switchTab('leads',this)">Leads</button>
@@ -186,14 +186,19 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
   <div id="pipeline-board" class="stage-cols"><div class="loading">Loading...</div></div>
 </div>
 
-<!-- TO DO -->
+<!-- TO DO / FOLLOW UP -->
 <div class="view" id="view-todos">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-    <div style="display:flex;gap:8px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
       <select id="todo-filter" onchange="renderTodos()" style="width:auto;font-size:13px">
         <option value="active">Open tasks</option>
         <option value="all">All tasks</option>
         <option value="done">Completed</option>
+      </select>
+      <select id="todo-type-filter" onchange="renderTodos()" style="width:auto;font-size:13px">
+        <option value="">All types</option>
+        <option value="To Do">To Do</option>
+        <option value="Follow Up">Follow Up</option>
       </select>
       <select id="todo-priority-filter" onchange="renderTodos()" style="width:auto;font-size:13px">
         <option value="">All priorities</option>
@@ -322,6 +327,7 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
       <div class="field"><label>Client</label><select id="deal-client"><option value="">— none —</option></select></div>
     </div>
     <div class="field"><label>Value ($)</label><input type="number" id="deal-value" placeholder="Sale price or annual rent"></div>
+    <div class="field"><label>Follow-up date</label><input type="date" id="deal-followup"></div>
     <div class="field"><label>Deal notes</label><textarea id="deal-notes" placeholder="Zoning, financing, key terms..."></textarea></div>
 
     <!-- Inline deal notes -->
@@ -389,6 +395,7 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
       <div class="field"><label>Phone</label><input type="tel" id="ct-phone"></div>
     </div>
     <div class="field"><label>Submarket</label><input type="text" id="ct-submarket" placeholder="e.g. Manhattan Beach, South Bay, Westside..."></div>
+    <div class="field"><label>Last contacted</label><input type="date" id="ct-last-contacted"></div>
     <div class="field"><label>Notes</label><textarea id="ct-notes" placeholder="Relationship notes, preferences, how you met..."></textarea></div>
     <div class="row">
       <button class="btn btn-danger" id="contact-delete-btn" onclick="deleteContact()" style="display:none;margin-right:auto">Delete</button>
@@ -484,12 +491,19 @@ tr:hover td{background:#f9f9f8;cursor:pointer}
     <input type="hidden" id="todo-id">
     <div class="field"><label>Task</label><input type="text" id="todo-text" placeholder="e.g. Follow up with Dana re: LOI"></div>
     <div class="grid2">
+      <div class="field"><label>Type</label>
+        <select id="todo-type">
+          <option value="To Do">To Do</option>
+          <option value="Follow Up">Follow Up</option>
+        </select>
+      </div>
       <div class="field"><label>Priority</label>
         <select id="todo-priority"><option>High</option><option selected>Normal</option><option>Low</option></select>
       </div>
-      <div class="field"><label>Due date</label><input type="date" id="todo-due"></div>
     </div>
+    <div class="field"><label>Due date</label><input type="date" id="todo-due"></div>
     <div class="field"><label>Linked deal (optional)</label><select id="todo-deal"><option value="">— none —</option></select></div>
+    <div class="field"><label>Linked contact (optional)</label><select id="todo-contact"><option value="">— none —</option></select></div>
     <div class="row">
       <button class="btn btn-danger" id="todo-delete-btn" onclick="deleteTodo()" style="display:none;margin-right:auto">Delete</button>
       <button class="btn" onclick="closeModal('todo-modal')">Cancel</button>
@@ -593,28 +607,53 @@ function renderDashboard(){
 
 function renderDashTodos(){
   const el=document.getElementById('dash-todos');
+  const today=new Date();today.setHours(0,0,0,0);
   const open=todos.filter(t=>!t.done).sort((a,b)=>{
     const p={High:0,Normal:1,Low:2};
+    // Overdue and due today first
+    const aDue=a.due_date?new Date(a.due_date+'T12:00:00'):null;
+    const bDue=b.due_date?new Date(b.due_date+'T12:00:00'):null;
+    const aUrgent=aDue&&aDue<=today?0:1;
+    const bUrgent=bDue&&bDue<=today?0:1;
+    if(aUrgent!==bUrgent) return aUrgent-bUrgent;
     return (p[a.priority]||1)-(p[b.priority]||1);
   });
   if(!open.length){el.innerHTML='<div class="empty" style="padding:1rem">No open tasks 🎉</div>';return;}
-  el.innerHTML=open.map(t=>todoHtml(t,true)).join('');
+  const urgent=open.filter(t=>{const d=t.due_date?new Date(t.due_date+'T12:00:00'):null;return d&&d<=today;});
+  const upcoming=open.filter(t=>{const d=t.due_date?new Date(t.due_date+'T12:00:00'):null;return !d||d>today;});
+  let html='';
+  if(urgent.length){
+    html+=`<div style="font-size:11px;font-weight:500;color:#cc0000;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Overdue / Due today</div>`;
+    html+=urgent.map(t=>todoHtml(t)).join('');
+  }
+  if(upcoming.length){
+    if(urgent.length) html+=`<div style="font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:.04em;margin:10px 0 6px">Upcoming</div>`;
+    html+=upcoming.slice(0,8).map(t=>todoHtml(t)).join('');
+    if(upcoming.length>8) html+=`<div style="font-size:12px;color:#888;padding:6px 0">+${upcoming.length-8} more — <span style="color:#0066cc;cursor:pointer" onclick="switchTabByName('todos')">view all</span></div>`;
+  }
+  el.innerHTML=html;
 }
 
 function todoHtml(t, compact=false){
   const d=t.deal_id?deals.find(x=>x.id===t.deal_id):null;
+  const c=t.contact_id?contacts.find(x=>x.id===t.contact_id):null;
   const due=t.due_date?new Date(t.due_date+'T12:00:00'):null;
   const overdue=due&&due<new Date()&&!t.done;
   const dueStr=due?due.toLocaleDateString('en-US',{month:'short',day:'numeric'}):'';
   const priClass=t.priority==='High'?'pri-high':t.priority==='Low'?'pri-low':'pri-normal';
+  const isFollowUp=(t.type||'To Do')==='Follow Up';
   return `<div class="todo-item${t.done?' done-item':''}" onclick="openTodoModal('${t.id}')">
     <div class="todo-check${t.done?' checked':''}" onclick="event.stopPropagation();toggleTodo('${t.id}')">${t.done?'✓':''}</div>
     <div class="todo-text-wrap">
-      <div class="todo-title${t.done?' done':''}">${t.text}</div>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        ${isFollowUp?'<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:#fff8e6;color:#996600;font-weight:500">Follow Up</span>':''}
+        <div class="todo-title${t.done?' done':''}">${t.text}</div>
+      </div>
       <div class="todo-meta">
         <span class="${priClass}">${t.priority}</span>
         ${dueStr?'<span style="margin-left:8px;'+(overdue?'color:#cc0000;font-weight:500':'')+'">'+( overdue?'Overdue · ':'')+dueStr+'</span>':''}
         ${d?'<span style="margin-left:8px;color:#0066cc">'+d.name+'</span>':''}
+        ${c?'<span style="margin-left:8px;color:#555">'+c.name+'</span>':''}
       </div>
     </div>
   </div>`;
@@ -623,12 +662,14 @@ function todoHtml(t, compact=false){
 function renderTodos(){
   const filter=document.getElementById('todo-filter').value;
   const priFilter=document.getElementById('todo-priority-filter').value;
+  const typeFilter=document.getElementById('todo-type-filter').value;
   let filtered=todos.filter(t=>{
     if(filter==='active') return !t.done;
     if(filter==='done') return t.done;
     return true;
   });
   if(priFilter) filtered=filtered.filter(t=>t.priority===priFilter);
+  if(typeFilter) filtered=filtered.filter(t=>(t.type||'To Do')===typeFilter);
   filtered.sort((a,b)=>{
     if(a.done!==b.done) return a.done?1:-1;
     const p={High:0,Normal:1,Low:2};
@@ -662,27 +703,33 @@ async function toggleTodo(id){
 function openTodoModal(id){
   const sel=document.getElementById('todo-deal');
   sel.innerHTML='<option value="">— none —</option>'+deals.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+  const csel=document.getElementById('todo-contact');
+  csel.innerHTML='<option value="">— none —</option>'+contacts.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
   if(id){
     const t=todos.find(x=>x.id===id);
     document.getElementById('todo-modal-title').textContent='Edit task';
     document.getElementById('todo-id').value=t.id;
     document.getElementById('todo-text').value=t.text;
+    document.getElementById('todo-type').value=t.type||'To Do';
     document.getElementById('todo-priority').value=t.priority||'Normal';
     document.getElementById('todo-due').value=t.due_date||'';
     document.getElementById('todo-deal').value=t.deal_id||'';
+    document.getElementById('todo-contact').value=t.contact_id||'';
     document.getElementById('todo-delete-btn').style.display='inline-block';
   }else{
     document.getElementById('todo-modal-title').textContent='Add task';
     ['todo-id','todo-text','todo-due'].forEach(f=>document.getElementById(f).value='');
+    document.getElementById('todo-type').value='To Do';
     document.getElementById('todo-priority').value='Normal';
     document.getElementById('todo-deal').value='';
+    document.getElementById('todo-contact').value='';
     document.getElementById('todo-delete-btn').style.display='none';
   }
   document.getElementById('todo-modal').classList.add('open');
 }
 async function saveTodo(){
   const id=document.getElementById('todo-id').value;
-  const obj={id:id||uid(),text:document.getElementById('todo-text').value,priority:document.getElementById('todo-priority').value,due_date:document.getElementById('todo-due').value||null,deal_id:document.getElementById('todo-deal').value||null,done:false};
+  const obj={id:id||uid(),text:document.getElementById('todo-text').value,type:document.getElementById('todo-type').value,priority:document.getElementById('todo-priority').value,due_date:document.getElementById('todo-due').value||null,deal_id:document.getElementById('todo-deal').value||null,contact_id:document.getElementById('todo-contact').value||null,done:false};
   if(!obj.text){alert('Task text is required.');return;}
   if(id){
     const existing=todos.find(t=>t.id===id);
@@ -792,14 +839,21 @@ function renderContacts(){
   if(!filtered.length){list.innerHTML='<div class="empty">No contacts yet.</div>';return;}
   list.innerHTML=filtered.map(c=>{
     const linkedClient=c.client_id?clients.find(cl=>cl.id===c.client_id):null;
+    const lc=c.last_contacted?new Date(c.last_contacted+'T12:00:00'):null;
+    const daysSince=lc?Math.floor((Date.now()-lc)/(1000*60*60*24)):null;
+    const stale=daysSince!==null&&daysSince>30;
+    const lcStr=lc?lc.toLocaleDateString('en-US',{month:'short',day:'numeric'}):'';
     return `
     <div class="contact-row" onclick="openContactModal('${c.id}')">
       <div class="avatar">${c.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
       <div class="contact-info">
         <div class="contact-name">${c.name}${c.title?'<span style="font-size:11px;font-weight:400;color:#888;margin-left:6px">'+c.title+'</span>':''}</div>
-        <div class="contact-detail">${[c.company||( linkedClient?linkedClient.name:''),c.email,c.phone].filter(Boolean).join(' · ')}</div>
-        ${linkedClient?'<div style="margin-top:3px;font-size:11px;color:#0066cc">'+linkedClient.name+'</div>':''}
-        ${c.submarket?'<div style="margin-top:3px"><span class="submarket-pill">'+c.submarket+'</span></div>':''}
+        <div class="contact-detail">${[c.company||(linkedClient?linkedClient.name:''),c.email,c.phone].filter(Boolean).join(' · ')}</div>
+        <div style="margin-top:3px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          ${linkedClient?'<span style="font-size:11px;color:#0066cc">'+linkedClient.name+'</span>':''}
+          ${c.submarket?'<span class="submarket-pill">'+c.submarket+'</span>':''}
+          ${lcStr?'<span style="font-size:11px;'+(stale?'color:#cc0000;font-weight:500':'color:#888')+'">Last contact: '+lcStr+(stale?' ⚠':'')+'</span>':''}
+        </div>
       </div>
       <span class="type-pill">${c.type||''}</span>
     </div>`}).join('');
@@ -972,13 +1026,14 @@ function openDealModal(id){
     document.getElementById('deal-type').value=d.type||'Retail';
     document.getElementById('deal-client').value=d.client_id||'';
     document.getElementById('deal-value').value=d.value||'';
+    document.getElementById('deal-followup').value=d.follow_up_date||'';
     document.getElementById('deal-notes').value=d.notes||'';
     document.getElementById('deal-delete-btn').style.display='inline-block';
     document.getElementById('deal-notes-section').style.display='block';
     renderDealNotes(id);
   }else{
     document.getElementById('deal-modal-title').textContent='Add deal';
-    ['deal-id','deal-name','deal-value','deal-notes','new-note-text'].forEach(f=>document.getElementById(f).value='');
+    ['deal-id','deal-name','deal-value','deal-followup','deal-notes','new-note-text'].forEach(f=>document.getElementById(f).value='');
     document.getElementById('deal-pipeline').value=activePipeline==='sales'?'Sales':'Leasing';
     updateStageOptions();
     document.getElementById('deal-delete-btn').style.display='none';
@@ -988,11 +1043,24 @@ function openDealModal(id){
 }
 async function saveDeal(){
   const id=document.getElementById('deal-id').value;
-  const obj={id:id||uid(),name:document.getElementById('deal-name').value,deal_type:document.getElementById('deal-pipeline').value,stage:document.getElementById('deal-stage').value,type:document.getElementById('deal-type').value,client_id:document.getElementById('deal-client').value||null,value:+document.getElementById('deal-value').value||null,notes:document.getElementById('deal-notes').value};
+  const followUp=document.getElementById('deal-followup').value;
+  const obj={id:id||uid(),name:document.getElementById('deal-name').value,deal_type:document.getElementById('deal-pipeline').value,stage:document.getElementById('deal-stage').value,type:document.getElementById('deal-type').value,client_id:document.getElementById('deal-client').value||null,value:+document.getElementById('deal-value').value||null,follow_up_date:followUp||null,notes:document.getElementById('deal-notes').value};
   if(!obj.name){alert('Deal name is required.');return;}
   if(id){await sb.from('deals').update(obj).eq('id',id);deals=deals.map(d=>d.id===id?obj:d);}
   else{await sb.from('deals').insert(obj);deals.push(obj);activeDealId=obj.id;}
-  closeModal('deal-modal');renderPipeline();showToast('Deal saved.');
+  // Auto-create a follow-up task if date is set
+  if(followUp){
+    const existingFollowUp=todos.find(t=>t.deal_id===obj.id&&t.type==='Follow Up');
+    if(!existingFollowUp){
+      const task={id:uid(),text:'Follow up: '+obj.name,type:'Follow Up',priority:'Normal',due_date:followUp,deal_id:obj.id,contact_id:null,done:false};
+      await sb.from('todos').insert(task);
+      todos.push(task);
+    } else {
+      await sb.from('todos').update({due_date:followUp}).eq('id',existingFollowUp.id);
+      todos=todos.map(t=>t.id===existingFollowUp.id?{...t,due_date:followUp}:t);
+    }
+  }
+  closeModal('deal-modal');renderPipeline();if(document.getElementById('view-dashboard').classList.contains('active'))renderDashboard();showToast('Deal saved.');
 }
 async function deleteDeal(){
   if(!confirm('Delete this deal?'))return;
@@ -1095,11 +1163,12 @@ function openContactModal(id){
     document.getElementById('ct-email').value=c.email||'';
     document.getElementById('ct-phone').value=c.phone||'';
     document.getElementById('ct-submarket').value=c.submarket||'';
+    document.getElementById('ct-last-contacted').value=c.last_contacted||'';
     document.getElementById('ct-notes').value=c.notes||'';
     document.getElementById('contact-delete-btn').style.display='inline-block';
   }else{
     document.getElementById('contact-modal-title').textContent='Add contact';
-    ['ct-id','ct-name','ct-company','ct-title','ct-email','ct-phone','ct-notes','ct-submarket'].forEach(f=>document.getElementById(f).value='');
+    ['ct-id','ct-name','ct-company','ct-title','ct-email','ct-phone','ct-notes','ct-submarket','ct-last-contacted'].forEach(f=>document.getElementById(f).value='');
     document.getElementById('ct-client-id').value='';
     document.getElementById('contact-delete-btn').style.display='none';
   }
@@ -1107,7 +1176,7 @@ function openContactModal(id){
 }
 async function saveContact(){
   const id=document.getElementById('ct-id').value;
-  const obj={id:id||uid(),name:document.getElementById('ct-name').value,type:document.getElementById('ct-type').value,company:document.getElementById('ct-company').value,title:document.getElementById('ct-title').value,client_id:document.getElementById('ct-client-id').value||null,email:document.getElementById('ct-email').value,phone:document.getElementById('ct-phone').value,submarket:document.getElementById('ct-submarket').value,notes:document.getElementById('ct-notes').value};
+  const obj={id:id||uid(),name:document.getElementById('ct-name').value,type:document.getElementById('ct-type').value,company:document.getElementById('ct-company').value,title:document.getElementById('ct-title').value,client_id:document.getElementById('ct-client-id').value||null,email:document.getElementById('ct-email').value,phone:document.getElementById('ct-phone').value,submarket:document.getElementById('ct-submarket').value,last_contacted:document.getElementById('ct-last-contacted').value||null,notes:document.getElementById('ct-notes').value};
   if(!obj.name){alert('Name is required.');return;}
   if(id){await sb.from('contacts').update(obj).eq('id',id);contacts=contacts.map(c=>c.id===id?obj:c);}
   else{await sb.from('contacts').insert(obj);contacts.push(obj);}
