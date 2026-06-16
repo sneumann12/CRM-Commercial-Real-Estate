@@ -170,7 +170,7 @@ tr:hover td{background:var(--accent-light);cursor:pointer}
     <button class="tab" onclick="switchTab('contacts',this)">Contacts</button>
     <button class="tab" onclick="switchTab('leads',this)">Leads</button>
     <button class="tab" onclick="switchTab('offmarket',this)">Off Market</button>
-    <button class="tab" onclick="switchTab('email',this)">Email blast</button>
+    <button class="tab" onclick="switchTab('comps',this)">Comps</button>
     <button class="tab" onclick="switchTab('commissions',this)">Commissions</button>
     <button class="tab" onclick="switchTab('export',this)">Export</button>
   </div>
@@ -281,6 +281,52 @@ tr:hover td{background:var(--accent-light);cursor:pointer}
   <div id="contact-list"><div class="loading">Loading...</div></div>
 </div>
 
+<!-- COMPS -->
+<div class="view" id="view-comps">
+  <div class="pipeline-toggle" style="margin-bottom:1rem">
+    <button class="ptab active" id="comp-tab-lease" onclick="switchCompTab('lease',this)">Lease comps</button>
+    <button class="ptab" id="comp-tab-sale" onclick="switchCompTab('sale',this)">Sale comps</button>
+  </div>
+
+  <!-- SALE COMPS -->
+  <div id="comp-view-sale" style="display:none">
+    <div class="search-row">
+      <input type="text" placeholder="Search sale comps..." id="sale-comp-search" oninput="renderSaleComps()">
+      <select id="sale-comp-submarket" onchange="renderSaleComps()" style="width:auto"><option value="">All submarkets</option></select>
+      <button class="btn btn-cta" onclick="openSaleCompModal()">+ Add sale comp</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Address</th><th>Submarket</th><th>Type</th><th>Size (SF)</th>
+          <th>Sale price</th><th>$/SF</th><th>Cap rate</th>
+          <th>Buyer</th><th>Seller</th><th>Brokers</th><th>Date closed</th><th>Notes</th>
+        </tr></thead>
+        <tbody id="sale-comp-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- LEASE COMPS -->
+  <div id="comp-view-lease">
+    <div class="search-row">
+      <input type="text" placeholder="Search lease comps..." id="lease-comp-search" oninput="renderLeaseComps()">
+      <select id="lease-comp-submarket" onchange="renderLeaseComps()" style="width:auto"><option value="">All submarkets</option></select>
+      <button class="btn btn-cta" onclick="openLeaseCompModal()">+ Add lease comp</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Address</th><th>Submarket</th><th>Type</th><th>Size (SF)</th>
+          <th>$/SF/mo</th><th>Annual rent</th><th>Tenant</th><th>Landlord</th>
+          <th>Brokers</th><th>Date executed</th><th>Term (yrs)</th><th>TI</th><th>Free rent</th><th>Notes</th>
+        </tr></thead>
+        <tbody id="lease-comp-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 <!-- LEADS -->
 <div class="view" id="view-leads">
   <div class="search-row">
@@ -350,6 +396,8 @@ tr:hover td{background:var(--accent-light);cursor:pointer}
     <div class="export-card"><h3>Leads</h3><p>Address, owner, contact info, notes</p><button class="btn btn-primary btn-sm" onclick="exportLeads()">Download leads.csv</button></div>
     <div class="export-card"><h3>Off market properties</h3><p>Address, submarket, size, value, owner, last contact</p><button class="btn btn-primary btn-sm" onclick="exportOffMarket()">Download off_market.csv</button></div>
     <div class="export-card"><h3>Commissions</h3><p>Deal, rate, gross, net, status, close date</p><button class="btn btn-primary btn-sm" onclick="exportCommissions()">Download commissions.csv</button></div>
+    <div class="export-card"><h3>Sale comps</h3><p>Address, submarket, size, price, $/SF, cap rate, buyer, seller, brokers</p><button class="btn btn-primary btn-sm" onclick="exportSaleComps()">Download sale_comps.csv</button></div>
+    <div class="export-card"><h3>Lease comps</h3><p>Address, submarket, size, rent/SF/mo, tenant, landlord, brokers, TI, free rent</p><button class="btn btn-primary btn-sm" onclick="exportLeaseComps()">Download lease_comps.csv</button></div>
   </div>
 </div>
 
@@ -574,6 +622,83 @@ tr:hover td{background:var(--accent-light);cursor:pointer}
   </div>
 </div>
 
+<!-- SALE COMP MODAL -->
+<div class="modal-bg" id="sale-comp-modal">
+  <div class="modal">
+    <div class="modal-title"><span id="sale-comp-modal-title">Add sale comp</span><button class="close-btn" onclick="closeModal('sale-comp-modal')">×</button></div>
+    <input type="hidden" id="sc-id">
+    <div class="field"><label>Address</label><input type="text" id="sc-address" placeholder="e.g. 1234 Pacific Ave, Manhattan Beach"></div>
+    <div class="grid2">
+      <div class="field"><label>Submarket</label><input type="text" id="sc-submarket" placeholder="e.g. Manhattan Beach"></div>
+      <div class="field"><label>Property type</label>
+        <select id="sc-type"><option>Retail</option><option>Office</option><option>Industrial</option><option>Multifamily</option><option>Mixed-use</option><option>Land</option></select>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Size (SF)</label><input type="number" id="sc-sf" placeholder="e.g. 5000" oninput="calcSaleComp()"></div>
+      <div class="field"><label>Sale price ($)</label><input type="number" id="sc-price" placeholder="e.g. 3200000" oninput="calcSaleComp()"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Price/SF ($) — auto-calculated</label><input type="number" id="sc-ppsf" placeholder="or enter manually" step="0.01" oninput="calcSaleComp()"></div>
+      <div class="field"><label>Cap rate (%)</label><input type="number" id="sc-caprate" placeholder="e.g. 5.5" step="0.1"></div>
+    </div>
+    <div id="sc-calc" style="background:var(--gold-light);border:1px solid var(--gold);border-radius:var(--radius-sm);padding:10px;font-size:13px;margin-bottom:12px;display:none"></div>
+    <div class="grid2">
+      <div class="field"><label>Buyer</label><input type="text" id="sc-buyer"></div>
+      <div class="field"><label>Seller</label><input type="text" id="sc-seller"></div>
+    </div>
+    <div class="field"><label>Brokers</label><input type="text" id="sc-brokers" placeholder="e.g. CBRE, NAI Capital"></div>
+    <div class="field"><label>Date closed</label><input type="date" id="sc-date"></div>
+    <div class="field"><label>Notes</label><textarea id="sc-notes" placeholder="Financing, zoning, context..."></textarea></div>
+    <div class="row">
+      <button class="btn btn-danger" id="sc-delete-btn" onclick="deleteSaleComp()" style="display:none;margin-right:auto">Delete</button>
+      <button class="btn" onclick="closeModal('sale-comp-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSaleComp()">Save comp</button>
+    </div>
+  </div>
+</div>
+
+<!-- LEASE COMP MODAL -->
+<div class="modal-bg" id="lease-comp-modal">
+  <div class="modal">
+    <div class="modal-title"><span id="lease-comp-modal-title">Add lease comp</span><button class="close-btn" onclick="closeModal('lease-comp-modal')">×</button></div>
+    <input type="hidden" id="lc-id">
+    <div class="field"><label>Address</label><input type="text" id="lc-address" placeholder="e.g. 90 Pier Ave, Hermosa Beach"></div>
+    <div class="grid2">
+      <div class="field"><label>Submarket</label><input type="text" id="lc-submarket" placeholder="e.g. Hermosa Beach"></div>
+      <div class="field"><label>Property type</label>
+        <select id="lc-type"><option>Retail</option><option>Office</option><option>Industrial</option><option>Multifamily</option><option>Mixed-use</option><option>Land</option></select>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Size (SF)</label><input type="number" id="lc-sf" placeholder="e.g. 1850" oninput="calcLeaseComp()"></div>
+      <div class="field"><label>Rent ($/SF/mo)</label><input type="number" id="lc-rent" placeholder="e.g. 5.25" step="0.01" oninput="calcLeaseComp()"></div>
+    </div>
+    <div id="lc-calc" style="background:var(--gold-light);border:1px solid var(--gold);border-radius:var(--radius-sm);padding:10px;font-size:13px;margin-bottom:12px;display:none"></div>
+    <div class="grid2">
+      <div class="field"><label>Tenant</label><input type="text" id="lc-tenant"></div>
+      <div class="field"><label>Landlord</label><input type="text" id="lc-landlord"></div>
+    </div>
+    <div class="field"><label>Brokers</label><input type="text" id="lc-brokers" placeholder="e.g. NAI Capital, JLL"></div>
+    <div class="grid2">
+      <div class="field"><label>Date executed</label><input type="date" id="lc-date"></div>
+      <div class="field"><label>Lease term (years)</label><input type="number" id="lc-term" step="0.5" placeholder="e.g. 5"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>TI allowance ($/SF)</label><input type="number" id="lc-ti" step="1" placeholder="e.g. 50"></div>
+      <div class="field"><label>Free rent (months)</label><input type="number" id="lc-freerent" step="1" placeholder="e.g. 3"></div>
+    </div>
+    <div class="field"><label>Notes</label><textarea id="lc-notes" placeholder="NNN vs gross, renewal options, context..."></textarea></div>
+    <div class="row">
+      <button class="btn btn-danger" id="lc-delete-btn" onclick="deleteLeaseComp()" style="display:none;margin-right:auto">Delete</button>
+      <button class="btn" onclick="closeModal('lease-comp-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveLeaseComp()">Save comp</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" style="position:fixed;bottom:1.5rem;right:1.5rem;background:var(--text);color:#fff;padding:10px 18px;border-radius:var(--radius-sm);font-size:13px;z-index:200;opacity:0;transition:opacity .2s;box-shadow:var(--shadow-md)"></div>
+
 <script>
 const SUPABASE_URL='https://tymyhsidyetcfevjskxm.supabase.co';
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5bXloc2lkeWV0Y2Zldmpza3htIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1Mzg2MTIsImV4cCI6MjA5NzExNDYxMn0.6WppQ7mJlWXNS9C8MZVEgVG_CA4he1G86egTrsyDcAI';
@@ -582,7 +707,7 @@ const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 const SALES_STAGES=['Prospect','LOI','Due diligence','In escrow','Closed'];
 const LEASE_STAGES=['Prospect','Tour','LOI','Lease negotiation','Closed'];
 
-let deals=[],clients=[],contacts=[],notes=[],commissions=[],leads=[],offMarket=[],sentBlasts=[],todos=[];
+let deals=[],clients=[],contacts=[],notes=[],commissions=[],leads=[],offMarket=[],sentBlasts=[],todos=[],saleComps=[],leaseComps=[];
 let selectedRecipients=new Set();
 let activePipeline='sales';
 let activeDealId=null;
@@ -596,7 +721,7 @@ function setSync(msg){document.getElementById('sync-status').textContent=msg;}
 async function loadAll(){
   setSync('Syncing...');
   try{
-    const [d,cl,ct,n,k,l,o,td]=await Promise.all([
+    const [d,cl,ct,n,k,l,o,td,sc,lc]=await Promise.all([
       sb.from('deals').select('*'),
       sb.from('clients').select('*'),
       sb.from('contacts').select('*'),
@@ -605,8 +730,10 @@ async function loadAll(){
       sb.from('leads').select('*'),
       sb.from('off_market').select('*'),
       sb.from('todos').select('*'),
+      sb.from('sale_comps').select('*'),
+      sb.from('lease_comps').select('*'),
     ]);
-    deals=d.data||[];clients=cl.data||[];contacts=ct.data||[];notes=n.data||[];commissions=k.data||[];leads=l.data||[];offMarket=o.data||[];todos=td.data||[];
+    deals=d.data||[];clients=cl.data||[];contacts=ct.data||[];notes=n.data||[];commissions=k.data||[];leads=l.data||[];offMarket=o.data||[];todos=td.data||[];saleComps=sc.data||[];leaseComps=lc.data||[];
     setSync('Synced ✓');
     renderDashboard();
   }catch(e){setSync('Connection error');console.error(e);}
@@ -619,7 +746,7 @@ function switchTab(t,el){
   document.getElementById('view-'+t).classList.add('active');
   if(t==='dashboard')renderDashboard();
   if(t==='pipeline')renderPipeline();
-  if(t==='todos')renderTodos();
+  if(t==='comps')renderLeaseComps();
   if(t==='clients')renderClients();
   if(t==='contacts')renderContacts();
   if(t==='leads')renderLeads();
@@ -1562,6 +1689,216 @@ async function deleteComm(){
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')}));
 
+// COMPS
+function switchCompTab(type, el){
+  document.querySelectorAll('#comp-tab-sale,#comp-tab-lease').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('comp-view-sale').style.display=type==='sale'?'block':'none';
+  document.getElementById('comp-view-lease').style.display=type==='lease'?'block':'none';
+  if(type==='sale')renderSaleComps();
+  else renderLeaseComps();
+}
+
+function calcSaleComp(){
+  const sf=+document.getElementById('sc-sf').value||0;
+  const price=+document.getElementById('sc-price').value||0;
+  const ppsf=+document.getElementById('sc-ppsf').value||0;
+  const calc=document.getElementById('sc-calc');
+  if(sf&&price&&!ppsf){
+    const computed=(price/sf).toFixed(2);
+    document.getElementById('sc-ppsf').value=computed;
+    calc.style.display='block';
+    calc.innerHTML=`<span style="color:var(--text3)">Price/SF:</span> <strong style="color:var(--gold)">$${computed}/SF</strong>`;
+  } else if(sf&&ppsf&&!price){
+    const computed=Math.round(sf*ppsf);
+    document.getElementById('sc-price').value=computed;
+    calc.style.display='block';
+    calc.innerHTML=`<span style="color:var(--text3)">Sale price:</span> <strong style="color:var(--gold)">${fmt(computed)}</strong>`;
+  } else if(sf&&price&&ppsf){
+    calc.style.display='block';
+    calc.innerHTML=`<span style="color:var(--text3)">Sale price:</span> <strong style="color:var(--gold)">${fmt(price)}</strong> &nbsp;·&nbsp; <span style="color:var(--text3)">Price/SF:</span> <strong style="color:var(--gold)">$${(price/sf).toFixed(2)}/SF</strong>`;
+  } else { calc.style.display='none'; }
+}
+
+function calcLeaseComp(){
+  const sf=+document.getElementById('lc-sf').value||0;
+  const rent=+document.getElementById('lc-rent').value||0;
+  const calc=document.getElementById('lc-calc');
+  if(sf&&rent){
+    const monthly=sf*rent;
+    const annual=monthly*12;
+    calc.style.display='block';
+    calc.innerHTML=`<span style="color:var(--text3)">Monthly:</span> <strong style="color:var(--gold)">${fmt(monthly)}</strong> &nbsp;·&nbsp; <span style="color:var(--text3)">Annual:</span> <strong style="color:var(--gold)">${fmt(annual)}</strong>`;
+  } else { calc.style.display='none'; }
+}
+
+function renderSaleComps(){
+  const q=(document.getElementById('sale-comp-search').value||'').toLowerCase();
+  const smFilter=document.getElementById('sale-comp-submarket').value;
+  const submarkets=[...new Set(saleComps.map(c=>c.submarket).filter(Boolean))].sort();
+  const sel=document.getElementById('sale-comp-submarket');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">All submarkets</option>'+submarkets.map(s=>`<option value="${s}">${s}</option>`).join('');
+  sel.value=cur;
+  const filtered=saleComps.filter(c=>{
+    const mq=!q||c.address.toLowerCase().includes(q)||(c.buyer||'').toLowerCase().includes(q)||(c.seller||'').toLowerCase().includes(q)||(c.submarket||'').toLowerCase().includes(q);
+    const ms=!smFilter||c.submarket===smFilter;
+    return mq&&ms;
+  }).sort((a,b)=>new Date(b.date_closed||0)-new Date(a.date_closed||0));
+  const tbody=document.getElementById('sale-comp-body');
+  if(!filtered.length){tbody.innerHTML='<tr><td colspan="12" style="text-align:center;padding:2rem;color:var(--text3)">No sale comps yet.</td></tr>';return;}
+  tbody.innerHTML=filtered.map(c=>{
+    const dt=c.date_closed?new Date(c.date_closed+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—';
+    const ppsf=c.price_per_sf||(c.sale_price&&c.size_sf?c.sale_price/c.size_sf:null);
+    return `<tr onclick="openSaleCompModal('${c.id}')">
+      <td style="font-weight:500">${c.address}</td>
+      <td>${c.submarket?'<span class="submarket-pill">'+c.submarket+'</span>':''}</td>
+      <td>${c.property_type||'—'}</td>
+      <td>${c.size_sf?c.size_sf.toLocaleString()+' SF':'—'}</td>
+      <td style="color:var(--gold);font-weight:600">${c.sale_price?fmt(c.sale_price):'—'}</td>
+      <td style="color:var(--gold);font-weight:500">${ppsf?'$'+ppsf.toFixed(0)+'/SF':'—'}</td>
+      <td>${c.cap_rate?c.cap_rate+'%':'—'}</td>
+      <td>${c.buyer||'—'}</td>
+      <td>${c.seller||'—'}</td>
+      <td style="font-size:11px">${c.brokers||'—'}</td>
+      <td style="white-space:nowrap;color:var(--text3)">${dt}</td>
+      <td style="font-size:11px;color:var(--text3);max-width:150px">${c.notes||''}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderLeaseComps(){
+  const q=(document.getElementById('lease-comp-search').value||'').toLowerCase();
+  const smFilter=document.getElementById('lease-comp-submarket').value;
+  const submarkets=[...new Set(leaseComps.map(c=>c.submarket).filter(Boolean))].sort();
+  const sel=document.getElementById('lease-comp-submarket');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">All submarkets</option>'+submarkets.map(s=>`<option value="${s}">${s}</option>`).join('');
+  sel.value=cur;
+  const filtered=leaseComps.filter(c=>{
+    const mq=!q||c.address.toLowerCase().includes(q)||(c.tenant||'').toLowerCase().includes(q)||(c.landlord||'').toLowerCase().includes(q)||(c.submarket||'').toLowerCase().includes(q);
+    const ms=!smFilter||c.submarket===smFilter;
+    return mq&&ms;
+  }).sort((a,b)=>new Date(b.date_executed||0)-new Date(a.date_executed||0));
+  const tbody=document.getElementById('lease-comp-body');
+  if(!filtered.length){tbody.innerHTML='<tr><td colspan="14" style="text-align:center;padding:2rem;color:var(--text3)">No lease comps yet.</td></tr>';return;}
+  tbody.innerHTML=filtered.map(c=>{
+    const dt=c.date_executed?new Date(c.date_executed+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—';
+    const annual=c.annual_rent||(c.rent_per_sf_mo&&c.size_sf?c.rent_per_sf_mo*c.size_sf*12:null);
+    return `<tr onclick="openLeaseCompModal('${c.id}')">
+      <td style="font-weight:500">${c.address}</td>
+      <td>${c.submarket?'<span class="submarket-pill">'+c.submarket+'</span>':''}</td>
+      <td>${c.property_type||'—'}</td>
+      <td>${c.size_sf?c.size_sf.toLocaleString()+' SF':'—'}</td>
+      <td style="color:var(--gold);font-weight:600">${c.rent_per_sf_mo?'$'+c.rent_per_sf_mo+'/SF/mo':'—'}</td>
+      <td style="color:var(--gold);font-weight:500">${annual?fmt(annual)+'/yr':'—'}</td>
+      <td>${c.tenant||'—'}</td>
+      <td>${c.landlord||'—'}</td>
+      <td style="font-size:11px">${c.brokers||'—'}</td>
+      <td style="white-space:nowrap;color:var(--text3)">${dt}</td>
+      <td>${c.lease_term_years?c.lease_term_years+'yr':'—'}</td>
+      <td>${c.ti_allowance?'$'+c.ti_allowance+'/SF':'—'}</td>
+      <td>${c.free_rent_months?c.free_rent_months+'mo':'—'}</td>
+      <td style="font-size:11px;color:var(--text3);max-width:150px">${c.notes||''}</td>
+    </tr>`;
+  }).join('');
+}
+
+function openSaleCompModal(id){
+  if(id){
+    const c=saleComps.find(x=>x.id===id);
+    document.getElementById('sale-comp-modal-title').textContent='Edit sale comp';
+    document.getElementById('sc-id').value=c.id;
+    document.getElementById('sc-address').value=c.address;
+    document.getElementById('sc-submarket').value=c.submarket||'';
+    document.getElementById('sc-type').value=c.property_type||'Retail';
+    document.getElementById('sc-sf').value=c.size_sf||'';
+    document.getElementById('sc-price').value=c.sale_price||'';
+    document.getElementById('sc-ppsf').value=c.price_per_sf||'';
+    document.getElementById('sc-caprate').value=c.cap_rate||'';
+    document.getElementById('sc-buyer').value=c.buyer||'';
+    document.getElementById('sc-seller').value=c.seller||'';
+    document.getElementById('sc-brokers').value=c.brokers||'';
+    document.getElementById('sc-date').value=c.date_closed||'';
+    document.getElementById('sc-notes').value=c.notes||'';
+    document.getElementById('sc-delete-btn').style.display='inline-block';
+    calcSaleComp();
+  }else{
+    document.getElementById('sale-comp-modal-title').textContent='Add sale comp';
+    ['sc-id','sc-address','sc-submarket','sc-sf','sc-price','sc-ppsf','sc-caprate','sc-buyer','sc-seller','sc-brokers','sc-date','sc-notes'].forEach(f=>document.getElementById(f).value='');
+    document.getElementById('sc-type').value='Retail';
+    document.getElementById('sc-delete-btn').style.display='none';
+    document.getElementById('sc-calc').style.display='none';
+  }
+  document.getElementById('sale-comp-modal').classList.add('open');
+}
+async function saveSaleComp(){
+  const id=document.getElementById('sc-id').value;
+  const sf=+document.getElementById('sc-sf').value||null;
+  const price=+document.getElementById('sc-price').value||null;
+  const ppsf=+document.getElementById('sc-ppsf').value||(sf&&price?+(price/sf).toFixed(2):null);
+  const obj={id:id||uid(),address:document.getElementById('sc-address').value,submarket:document.getElementById('sc-submarket').value,property_type:document.getElementById('sc-type').value,size_sf:sf,sale_price:price,price_per_sf:ppsf,cap_rate:+document.getElementById('sc-caprate').value||null,buyer:document.getElementById('sc-buyer').value,seller:document.getElementById('sc-seller').value,brokers:document.getElementById('sc-brokers').value,date_closed:document.getElementById('sc-date').value||null,notes:document.getElementById('sc-notes').value};
+  if(!obj.address){alert('Address is required.');return;}
+  if(id){await sb.from('sale_comps').update(obj).eq('id',id);saleComps=saleComps.map(c=>c.id===id?obj:c);}
+  else{await sb.from('sale_comps').insert(obj);saleComps.push(obj);}
+  closeModal('sale-comp-modal');renderSaleComps();showToast('Sale comp saved.');
+}
+async function deleteSaleComp(){
+  if(!confirm('Delete this comp?'))return;
+  const id=document.getElementById('sc-id').value;
+  await sb.from('sale_comps').delete().eq('id',id);
+  saleComps=saleComps.filter(c=>c.id!==id);
+  closeModal('sale-comp-modal');renderSaleComps();showToast('Sale comp deleted.');
+}
+
+function openLeaseCompModal(id){
+  if(id){
+    const c=leaseComps.find(x=>x.id===id);
+    document.getElementById('lease-comp-modal-title').textContent='Edit lease comp';
+    document.getElementById('lc-id').value=c.id;
+    document.getElementById('lc-address').value=c.address;
+    document.getElementById('lc-submarket').value=c.submarket||'';
+    document.getElementById('lc-type').value=c.property_type||'Retail';
+    document.getElementById('lc-sf').value=c.size_sf||'';
+    document.getElementById('lc-rent').value=c.rent_per_sf_mo||'';
+    document.getElementById('lc-tenant').value=c.tenant||'';
+    document.getElementById('lc-landlord').value=c.landlord||'';
+    document.getElementById('lc-brokers').value=c.brokers||'';
+    document.getElementById('lc-date').value=c.date_executed||'';
+    document.getElementById('lc-term').value=c.lease_term_years||'';
+    document.getElementById('lc-ti').value=c.ti_allowance||'';
+    document.getElementById('lc-freerent').value=c.free_rent_months||'';
+    document.getElementById('lc-notes').value=c.notes||'';
+    document.getElementById('lc-delete-btn').style.display='inline-block';
+    calcLeaseComp();
+  }else{
+    document.getElementById('lease-comp-modal-title').textContent='Add lease comp';
+    ['lc-id','lc-address','lc-submarket','lc-sf','lc-rent','lc-tenant','lc-landlord','lc-brokers','lc-date','lc-term','lc-ti','lc-freerent','lc-notes'].forEach(f=>document.getElementById(f).value='');
+    document.getElementById('lc-type').value='Retail';
+    document.getElementById('lc-delete-btn').style.display='none';
+    document.getElementById('lc-calc').style.display='none';
+  }
+  document.getElementById('lease-comp-modal').classList.add('open');
+}
+async function saveLeaseComp(){
+  const id=document.getElementById('lc-id').value;
+  const sf=+document.getElementById('lc-sf').value||null;
+  const rent=+document.getElementById('lc-rent').value||null;
+  const annual=sf&&rent?Math.round(sf*rent*12):null;
+  const obj={id:id||uid(),address:document.getElementById('lc-address').value,submarket:document.getElementById('lc-submarket').value,property_type:document.getElementById('lc-type').value,size_sf:sf,rent_per_sf_mo:rent,annual_rent:annual,tenant:document.getElementById('lc-tenant').value,landlord:document.getElementById('lc-landlord').value,brokers:document.getElementById('lc-brokers').value,date_executed:document.getElementById('lc-date').value||null,lease_term_years:+document.getElementById('lc-term').value||null,ti_allowance:+document.getElementById('lc-ti').value||null,free_rent_months:+document.getElementById('lc-freerent').value||null,notes:document.getElementById('lc-notes').value};
+  if(!obj.address){alert('Address is required.');return;}
+  if(id){await sb.from('lease_comps').update(obj).eq('id',id);leaseComps=leaseComps.map(c=>c.id===id?obj:c);}
+  else{await sb.from('lease_comps').insert(obj);leaseComps.push(obj);}
+  closeModal('lease-comp-modal');renderLeaseComps();showToast('Lease comp saved.');
+}
+async function deleteLeaseComp(){
+  if(!confirm('Delete this comp?'))return;
+  const id=document.getElementById('lc-id').value;
+  await sb.from('lease_comps').delete().eq('id',id);
+  leaseComps=leaseComps.filter(c=>c.id!==id);
+  closeModal('lease-comp-modal');renderLeaseComps();showToast('Lease comp deleted.');
+}
+
 function toCSV(rows){return rows.map(r=>r.map(v=>{const s=String(v==null?'':v).replace(/"/g,'""');return /[",\n]/.test(s)?`"${s}"`:s;}).join(',')).join('\n');}
 function download(filename,content){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type:'text/csv'}));a.download=filename;a.click();}
 function exportContacts(){const rows=[['Name','Type','Company','Title','Email','Phone','Submarket','Notes']];contacts.forEach(c=>rows.push([c.name,c.type||'',c.company||'',c.title||'',c.email||'',c.phone||'',c.submarket||'',c.notes||'']));download('contacts.csv',toCSV(rows));}
@@ -1570,6 +1907,8 @@ function exportDeals(){const rows=[['Name','Pipeline','Stage','Property Type','V
 function exportLeads(){const rows=[['Address','Owner Name','Owner Email','Owner Phone','Notes','Added']];leads.forEach(l=>rows.push([l.address,l.owner_name||'',l.owner_email||'',l.owner_phone||'',l.notes||'',l.created_at?new Date(l.created_at).toLocaleDateString():'']));download('leads.csv',toCSV(rows));}
 function exportOffMarket(){const rows=[['Address','Submarket','Property Type','Size (SF)','Est. Value','Owner Name','Owner Email','Owner Phone','Last Contact','Notes']];offMarket.forEach(o=>rows.push([o.address,o.submarket||'',o.property_type||'',o.size_sf||'',o.est_value||'',o.owner_name||'',o.owner_email||'',o.owner_phone||'',o.last_contact||'',o.notes||'']));download('off_market.csv',toCSV(rows));}
 function exportCommissions(){const rows=[['Deal','Sale Price','Rate (%)','Split (%)','Gross Comm','Net Comm','Status','Close Date','Notes']];commissions.forEach(c=>{const d=deals.find(x=>x.id===c.deal_id);const gross=c.sale*c.rate/100;const net=gross*(c.split||100)/100;rows.push([d?d.name:'',c.sale,c.rate,c.split||100,Math.round(gross),Math.round(net),c.status,c.close_date||'',c.notes||'']);});download('commissions.csv',toCSV(rows));}
+function exportSaleComps(){const rows=[['Address','Submarket','Type','Size (SF)','Sale Price','Price/SF','Cap Rate','Buyer','Seller','Brokers','Date Closed','Notes']];saleComps.forEach(c=>rows.push([c.address,c.submarket||'',c.property_type||'',c.size_sf||'',c.sale_price||'',c.price_per_sf||'',c.cap_rate||'',c.buyer||'',c.seller||'',c.brokers||'',c.date_closed||'',c.notes||'']));download('sale_comps.csv',toCSV(rows));}
+function exportLeaseComps(){const rows=[['Address','Submarket','Type','Size (SF)','$/SF/mo','Annual Rent','Tenant','Landlord','Brokers','Date Executed','Term (yrs)','TI ($/SF)','Free Rent (mo)','Notes']];leaseComps.forEach(c=>rows.push([c.address,c.submarket||'',c.property_type||'',c.size_sf||'',c.rent_per_sf_mo||'',c.annual_rent||'',c.tenant||'',c.landlord||'',c.brokers||'',c.date_executed||'',c.lease_term_years||'',c.ti_allowance||'',c.free_rent_months||'',c.notes||'']));download('lease_comps.csv',toCSV(rows));}
 
 loadAll();
 </script>
