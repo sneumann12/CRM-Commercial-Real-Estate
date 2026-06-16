@@ -777,6 +777,7 @@ function switchTab(t,el){
   document.getElementById('view-'+t).classList.add('active');
   if(t==='dashboard')renderDashboard();
   if(t==='pipeline')renderPipeline();
+  if(t==='todos')renderTodos();
   if(t==='comps')renderLeaseComps();
   if(t==='clients')renderClients();
   if(t==='contacts')renderContacts();
