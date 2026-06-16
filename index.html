@@ -430,12 +430,32 @@ tr:hover td{background:var(--accent-light);cursor:pointer}
     <div class="field" id="deal-calc-row" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;font-size:13px;color:var(--text2);display:none">Calculated total will appear here</div>
     <div style="border-top:1px solid var(--border);margin:12px 0 12px;padding-top:12px">
       <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Commission</div>
-      <div class="grid2">
-        <div class="field"><label>Commission rate (%)</label><input type="number" id="deal-comm-rate" placeholder="e.g. 3" step="0.1" oninput="updateDealCalc()"></div>
-        <div class="field"><label>Split (% my side)</label><input type="number" id="deal-split" placeholder="e.g. 50" step="1" oninput="updateDealCalc()"></div>
+
+      <!-- SALES: flat rate -->
+      <div id="sales-comm-fields">
+        <div class="grid2">
+          <div class="field"><label>Commission rate (%)</label><input type="number" id="deal-comm-rate" placeholder="e.g. 3" step="0.1" oninput="updateDealCalc()"></div>
+          <div class="field"><label>Split (% my side)</label><input type="number" id="deal-split" placeholder="e.g. 50" step="1" oninput="updateDealCalc()"></div>
+        </div>
       </div>
+
+      <!-- LEASING: term, escalation, tiered rate schedule -->
+      <div id="lease-comm-fields" style="display:none">
+        <div class="grid2">
+          <div class="field"><label>Lease term (years)</label><input type="number" id="deal-lease-term" placeholder="e.g. 5" min="1" step="1" oninput="renderRateSchedule()"></div>
+          <div class="field"><label>Annual escalation (%)</label><input type="number" id="deal-escalation" placeholder="e.g. 3" step="0.1" oninput="updateDealCalc()"></div>
+        </div>
+        <div class="field"><label>Split (% my side)</label><input type="number" id="deal-split-lease" placeholder="e.g. 50" step="1" oninput="updateDealCalc()"></div>
+        <div class="field">
+          <label>Commission rate by year</label>
+          <div id="rate-schedule-rows" style="display:flex;flex-direction:column;gap:6px"></div>
+          <div style="font-size:11px;color:var(--text3);margin-top:6px">Set the % commission rate applied to each year's rent. Common structure: higher in year 1, declining after.</div>
+        </div>
+      </div>
+
       <div class="field"><label>Partner / referral fee (% of my gross)</label><input type="number" id="deal-partner-fee" placeholder="e.g. 25" step="1" oninput="updateDealCalc()"></div>
       <div id="deal-comm-calc" style="background:var(--gold-light);border:1px solid var(--gold);border-radius:var(--radius-sm);padding:10px;font-size:13px;display:none"></div>
+      <div id="lease-comm-breakdown" style="display:none;margin-top:8px"></div>
     </div>
     <div class="field"><label>Follow-up date</label><input type="date" id="deal-followup"></div>
     <div class="field"><label>Deal notes</label><textarea id="deal-notes" placeholder="Zoning, financing, key terms..."></textarea></div>
@@ -760,6 +780,29 @@ function switchPipeline(type,el){
   el.classList.add('active');activePipeline=type;renderPipeline();
 }
 
+function calcDealCommission(d){
+  // Returns {gross, myGross, myNet, dealValue} for any deal (sale or lease, accounts for multi-year schedule)
+  if(d.deal_type==='Leasing'){
+    if(!(d.value&&d.size_sf&&d.lease_term_years&&Array.isArray(d.comm_rate_schedule)))return{gross:0,myGross:0,myNet:0,dealValue:0};
+    let totalGross=0,totalRent=0,rentYear=d.value*d.size_sf*12;
+    for(let y=1;y<=d.lease_term_years;y++){
+      const rate=d.comm_rate_schedule[y-1]||0;
+      totalGross+=rentYear*(rate/100);
+      totalRent+=rentYear;
+      rentYear=rentYear*(1+(d.annual_escalation||0)/100);
+    }
+    const myGross=totalGross*((d.cobroke_split||100)/100);
+    const myNet=myGross*(1-((d.partner_fee||0)/100));
+    return{gross:totalGross,myGross,myNet,dealValue:totalRent};
+  } else {
+    if(!(d.comm_rate&&d.value))return{gross:0,myGross:0,myNet:0,dealValue:d.value||0};
+    const gross=d.value*(d.comm_rate/100);
+    const myGross=gross*((d.cobroke_split||100)/100);
+    const myNet=myGross*(1-((d.partner_fee||0)/100));
+    return{gross,myGross,myNet,dealValue:d.value};
+  }
+}
+
 function renderDashboard(){
   // Stats
   const activeDeals=deals.filter(d=>d.stage!=='Closed'&&d.stage!=='Dead');
@@ -767,19 +810,12 @@ function renderDashboard(){
     const dv=d.deal_type==='Leasing'?(d.value||0)*(d.size_sf||0)*12:(d.value||0);
     return s+dv;
   },0);
-  const grossComm=deals.filter(d=>d.comm_rate&&d.stage!=='Dead').reduce((s,d)=>{
-    const dv=d.deal_type==='Leasing'?(d.value||0)*(d.size_sf||0)*12:(d.value||0);
-    return s+dv*(d.comm_rate/100);
-  },0);
-  const myGross=deals.filter(d=>d.comm_rate&&d.stage!=='Dead').reduce((s,d)=>{
-    const dv=d.deal_type==='Leasing'?(d.value||0)*(d.size_sf||0)*12:(d.value||0);
-    return s+dv*(d.comm_rate/100)*((d.cobroke_split||100)/100);
-  },0);
-  const myNet=deals.filter(d=>d.comm_rate&&d.stage!=='Dead').reduce((s,d)=>{
-    const dv=d.deal_type==='Leasing'?(d.value||0)*(d.size_sf||0)*12:(d.value||0);
-    const gross=dv*(d.comm_rate/100)*((d.cobroke_split||100)/100);
-    return s+gross*(1-((d.partner_fee||0)/100));
-  },0);
+  const commDeals=deals.filter(d=>d.stage!=='Dead');
+  let grossComm=0,myGross=0,myNet=0;
+  commDeals.forEach(d=>{
+    const c=calcDealCommission(d);
+    grossComm+=c.gross; myGross+=c.myGross; myNet+=c.myNet;
+  });
   document.getElementById('dash-val').textContent='$'+Math.round(totalVal).toLocaleString();
   document.getElementById('dash-active').textContent=activeDeals.length;
   document.getElementById('dash-gross').textContent=fmt(grossComm);
@@ -1040,13 +1076,21 @@ function makeDealCard(d, isDead=false){
   const isLease=d.deal_type==='Leasing';
   const sf=d.size_sf?d.size_sf.toLocaleString()+' SF':'';
   const valDisplay=d.value?'$'+Number(d.value).toLocaleString()+(isLease?'/SF/mo':''):'';
-  const dealVal=isLease?(d.value||0)*(d.size_sf||0)*12:(d.value||0);
   const calcDisplay=d.value&&d.size_sf
-    ?(isLease?fmt(d.value*d.size_sf*12)+'/yr':('$'+(d.value/d.size_sf).toFixed(0)+'/SF'))
+    ?(isLease?fmt(d.value*d.size_sf*12)+'/yr (Yr1)':('$'+(d.value/d.size_sf).toFixed(0)+'/SF'))
     :'';
-  const myNet=d.comm_rate&&dealVal
-    ?dealVal*(d.comm_rate/100)*((d.cobroke_split||100)/100)*(1-((d.partner_fee||0)/100))
-    :0;
+  let myNet=0;
+  if(isLease&&d.value&&d.size_sf&&d.lease_term_years&&Array.isArray(d.comm_rate_schedule)){
+    let totalGross=0,rentYear=d.value*d.size_sf*12;
+    for(let y=1;y<=d.lease_term_years;y++){
+      const rate=d.comm_rate_schedule[y-1]||0;
+      totalGross+=rentYear*(rate/100);
+      rentYear=rentYear*(1+(d.annual_escalation||0)/100);
+    }
+    myNet=totalGross*((d.cobroke_split||100)/100)*(1-((d.partner_fee||0)/100));
+  } else if(!isLease&&d.comm_rate&&d.value){
+    myNet=d.value*(d.comm_rate/100)*((d.cobroke_split||100)/100)*(1-((d.partner_fee||0)/100));
+  }
   const card=document.createElement('div');
   card.className='deal-card';
   if(isDead) card.style.cssText='opacity:.55;background:var(--red-light);border-color:#FECACA';
@@ -1055,7 +1099,8 @@ function makeDealCard(d, isDead=false){
     ${sf?'<div style="font-size:11px;color:var(--text3);margin-top:4px">'+sf+'</div>':''}
     ${valDisplay?'<div class="deal-val">'+valDisplay+'</div>':''}
     ${calcDisplay?'<div style="font-size:11px;color:var(--text2);margin-top:1px">'+calcDisplay+'</div>':''}
-    ${myNet?'<div style="font-size:11px;color:var(--gold);font-weight:600;margin-top:4px;border-top:1px solid var(--border);padding-top:4px">Net comm: '+fmt(myNet)+'</div>':''}
+    ${isLease&&d.lease_term_years?'<div style="font-size:11px;color:var(--text3);margin-top:1px">'+d.lease_term_years+'yr term'+(d.annual_escalation?' · '+d.annual_escalation+'%/yr':'')+'</div>':''}
+    ${myNet?'<div style="font-size:11px;color:var(--gold);font-weight:600;margin-top:4px;border-top:1px solid var(--border);padding-top:4px">Net comm'+(isLease?' (total term)':'')+': '+fmt(myNet)+'</div>':''}
     ${noteCount?'<div style="font-size:11px;color:var(--text3);margin-top:4px">📝 '+noteCount+' note'+(noteCount>1?'s':'')+'</div>':''}`;
   card.onclick=()=>openDealModal(d.id);
   return card;
@@ -1278,48 +1323,116 @@ function updateStageOptions(){
   // Update value label
   const lbl=document.getElementById('deal-value-label');
   if(lbl) lbl.textContent=pipeline==='Sales'?'Sale price ($)':'Rent ($/SF/month)';
+  // Toggle commission field sections
+  document.getElementById('sales-comm-fields').style.display=pipeline==='Sales'?'block':'none';
+  document.getElementById('lease-comm-fields').style.display=pipeline==='Leasing'?'block':'none';
+  if(pipeline==='Leasing') renderRateSchedule();
   updateDealCalc();
+}
+
+function renderRateSchedule(){
+  const years=Math.max(1,Math.min(20,+document.getElementById('deal-lease-term').value||0));
+  const container=document.getElementById('rate-schedule-rows');
+  if(!container)return;
+  // Preserve existing values when re-rendering
+  const existing=[];
+  container.querySelectorAll('input[data-year]').forEach(inp=>existing[+inp.dataset.year]=inp.value);
+  let html='';
+  for(let y=1;y<=years;y++){
+    const val=existing[y]!==undefined?existing[y]:'';
+    html+=`<div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:12px;color:var(--text2);width:50px;flex-shrink:0">Year ${y}</span>
+      <input type="number" step="0.1" placeholder="e.g. ${y===1?'6':'3'}" data-year="${y}" value="${val}" oninput="updateDealCalc()" style="flex:1">
+      <span style="font-size:12px;color:var(--text3)">%</span>
+    </div>`;
+  }
+  container.innerHTML=html||'<div style="font-size:12px;color:var(--text3)">Enter a lease term above to set rates per year.</div>';
+}
+
+function getRateSchedule(){
+  const rows=document.querySelectorAll('#rate-schedule-rows input[data-year]');
+  const schedule=[];
+  rows.forEach(inp=>schedule.push(+inp.value||0));
+  return schedule;
 }
 
 function updateDealCalc(){
   const pipeline=document.getElementById('deal-pipeline').value;
   const val=+document.getElementById('deal-value').value||0;
   const sf=+document.getElementById('deal-sf').value||0;
-  const commRate=+document.getElementById('deal-comm-rate').value||0;
-  const split=+document.getElementById('deal-split').value||100;
   const partnerFee=+document.getElementById('deal-partner-fee').value||0;
   const row=document.getElementById('deal-calc-row');
   const commRow=document.getElementById('deal-comm-calc');
+  const breakdownRow=document.getElementById('lease-comm-breakdown');
   if(!row||!commRow)return;
 
-  // Deal value calc
-  if(val&&sf){
-    if(pipeline==='Sales'){
+  if(pipeline==='Sales'){
+    breakdownRow.style.display='none';
+    const commRate=+document.getElementById('deal-comm-rate').value||0;
+    const split=+document.getElementById('deal-split').value||100;
+    if(val&&sf){
       const ppsf=(val/sf).toFixed(2);
       row.style.display='block';
       row.innerHTML=`<span style="color:var(--text3)">Price per SF:</span> <strong style="color:var(--gold)">$${ppsf}/SF</strong>`;
-    } else {
-      const annual=val*sf*12;
-      const monthly=val*sf;
-      row.style.display='block';
-      row.innerHTML=`<span style="color:var(--text3)">Monthly rent:</span> <strong style="color:var(--gold)">${fmt(monthly)}</strong> &nbsp;·&nbsp; <span style="color:var(--text3)">Annual:</span> <strong style="color:var(--gold)">${fmt(annual)}</strong>`;
-    }
+    } else { row.style.display='none'; }
+
+    if(commRate&&val){
+      const grossComm=val*commRate/100;
+      const myGross=grossComm*(split/100);
+      const myNet=myGross*(1-(partnerFee/100));
+      commRow.style.display='block';
+      commRow.innerHTML=`
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">
+          <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Gross comm</div><div style="font-size:14px;font-weight:700;color:var(--gold)">${fmt(grossComm)}</div></div>
+          <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">My gross (${split}%)</div><div style="font-size:14px;font-weight:700;color:var(--gold)">${fmt(myGross)}</div></div>
+          <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">My net${partnerFee?` (-${partnerFee}%)`:''}</div><div style="font-size:14px;font-weight:700;color:var(--gold)">${fmt(myNet)}</div></div>
+        </div>`;
+    } else { commRow.style.display='none'; }
+    return;
+  }
+
+  // LEASING — multi-year calculation
+  const term=+document.getElementById('deal-lease-term').value||0;
+  const escalation=+document.getElementById('deal-escalation').value||0;
+  const split=+document.getElementById('deal-split-lease').value||100;
+  const rateSchedule=getRateSchedule();
+
+  if(val&&sf){
+    const monthly=val*sf;
+    const annualY1=monthly*12;
+    row.style.display='block';
+    row.innerHTML=`<span style="color:var(--text3)">Monthly rent (Yr 1):</span> <strong style="color:var(--gold)">${fmt(monthly)}</strong> &nbsp;·&nbsp; <span style="color:var(--text3)">Annual (Yr 1):</span> <strong style="color:var(--gold)">${fmt(annualY1)}</strong>`;
   } else { row.style.display='none'; }
 
-  // Commission calc
-  if(commRate&&(val||(sf&&val))){
-    const dealVal=pipeline==='Sales'?val:(val*sf*12);
-    const grossComm=dealVal*commRate/100;
-    const myGross=grossComm*(split/100);
+  if(val&&sf&&term&&rateSchedule.some(r=>r>0)){
+    let totalGross=0;
+    let rentYear=val*sf*12; // year 1 annual rent
+    let rows='';
+    for(let y=1;y<=term;y++){
+      const rate=rateSchedule[y-1]||0;
+      const yearComm=rentYear*(rate/100);
+      totalGross+=yearComm;
+      rows+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--border)">
+        <span style="color:var(--text2)">Year ${y} — ${fmt(rentYear)} rent × ${rate}%</span>
+        <span style="color:var(--gold);font-weight:600">${fmt(yearComm)}</span>
+      </div>`;
+      rentYear=rentYear*(1+escalation/100);
+    }
+    const myGross=totalGross*(split/100);
     const myNet=myGross*(1-(partnerFee/100));
     commRow.style.display='block';
     commRow.innerHTML=`
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">
-        <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Gross comm</div><div style="font-size:14px;font-weight:700;color:var(--gold)">${fmt(grossComm)}</div></div>
+        <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Total gross comm</div><div style="font-size:14px;font-weight:700;color:var(--gold)">${fmt(totalGross)}</div></div>
         <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">My gross (${split}%)</div><div style="font-size:14px;font-weight:700;color:var(--gold)">${fmt(myGross)}</div></div>
         <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">My net${partnerFee?` (-${partnerFee}%)`:''}</div><div style="font-size:14px;font-weight:700;color:var(--gold)">${fmt(myNet)}</div></div>
       </div>`;
-  } else { commRow.style.display='none'; }
+    breakdownRow.style.display='block';
+    breakdownRow.innerHTML=`<div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Year-by-year breakdown</div>${rows}`;
+  } else {
+    commRow.style.display='none';
+    breakdownRow.style.display='none';
+  }
 }
 
 function renderDealNotes(dealId){
@@ -1362,47 +1475,82 @@ function openDealModal(id){
     document.getElementById('deal-sf').value=d.size_sf||'';
     document.getElementById('deal-comm-rate').value=d.comm_rate||'';
     document.getElementById('deal-split').value=d.cobroke_split||'';
+    document.getElementById('deal-split-lease').value=d.cobroke_split||'';
+    document.getElementById('deal-lease-term').value=d.lease_term_years||'';
+    document.getElementById('deal-escalation').value=d.annual_escalation||'';
     document.getElementById('deal-partner-fee').value=d.partner_fee||'';
     document.getElementById('deal-followup').value=d.follow_up_date||'';
     document.getElementById('deal-notes').value=d.notes||'';
     document.getElementById('deal-delete-btn').style.display='inline-block';
     document.getElementById('deal-notes-section').style.display='block';
     renderDealNotes(id);
+    if((d.deal_type||'Sales')==='Leasing'){
+      renderRateSchedule();
+      if(d.comm_rate_schedule&&Array.isArray(d.comm_rate_schedule)){
+        setTimeout(()=>{
+          document.querySelectorAll('#rate-schedule-rows input[data-year]').forEach((inp,idx)=>{
+            inp.value=d.comm_rate_schedule[idx]!==undefined?d.comm_rate_schedule[idx]:'';
+          });
+          updateDealCalc();
+        },0);
+      }
+    }
   }else{
     document.getElementById('deal-modal-title').textContent='Add deal';
-    ['deal-id','deal-name','deal-value','deal-sf','deal-comm-rate','deal-split','deal-partner-fee','deal-followup','deal-notes','new-note-text'].forEach(f=>document.getElementById(f).value='');
+    ['deal-id','deal-name','deal-value','deal-sf','deal-comm-rate','deal-split','deal-split-lease','deal-lease-term','deal-escalation','deal-partner-fee','deal-followup','deal-notes','new-note-text'].forEach(f=>document.getElementById(f).value='');
     document.getElementById('deal-pipeline').value=activePipeline==='sales'?'Sales':'Leasing';
     updateStageOptions();
     document.getElementById('deal-delete-btn').style.display='none';
     document.getElementById('deal-notes-section').style.display='none';
+    document.getElementById('rate-schedule-rows').innerHTML='';
   }
   document.getElementById('deal-modal').classList.add('open');
 }
 async function saveDeal(){
   const id=document.getElementById('deal-id').value;
   const followUp=document.getElementById('deal-followup').value;
-  const obj={id:id||uid(),name:document.getElementById('deal-name').value,deal_type:document.getElementById('deal-pipeline').value,stage:document.getElementById('deal-stage').value,type:document.getElementById('deal-type').value,client_id:document.getElementById('deal-client').value||null,value:+document.getElementById('deal-value').value||null,size_sf:+document.getElementById('deal-sf').value||null,comm_rate:+document.getElementById('deal-comm-rate').value||null,cobroke_split:+document.getElementById('deal-split').value||100,partner_fee:+document.getElementById('deal-partner-fee').value||0,follow_up_date:followUp||null,notes:document.getElementById('deal-notes').value};
+  const pipeline=document.getElementById('deal-pipeline').value;
+  const isLease=pipeline==='Leasing';
+  const split=isLease?(+document.getElementById('deal-split-lease').value||100):(+document.getElementById('deal-split').value||100);
+  const rateSchedule=isLease?getRateSchedule():null;
+  const obj={id:id||uid(),name:document.getElementById('deal-name').value,deal_type:pipeline,stage:document.getElementById('deal-stage').value,type:document.getElementById('deal-type').value,client_id:document.getElementById('deal-client').value||null,value:+document.getElementById('deal-value').value||null,size_sf:+document.getElementById('deal-sf').value||null,comm_rate:isLease?null:(+document.getElementById('deal-comm-rate').value||null),cobroke_split:split,partner_fee:+document.getElementById('deal-partner-fee').value||0,lease_term_years:isLease?(+document.getElementById('deal-lease-term').value||null):null,annual_escalation:isLease?(+document.getElementById('deal-escalation').value||0):null,comm_rate_schedule:isLease?rateSchedule:null,follow_up_date:followUp||null,notes:document.getElementById('deal-notes').value};
   if(!obj.name){alert('Deal name is required.');return;}
   if(id){await sb.from('deals').update(obj).eq('id',id);deals=deals.map(d=>d.id===id?obj:d);}
   else{await sb.from('deals').insert(obj);deals.push(obj);activeDealId=obj.id;}
 
-  // Auto-create/update commission record if rate is set
-  if(obj.comm_rate){
-    const dealVal=obj.deal_type==='Sales'?obj.value:((obj.value||0)*(obj.size_sf||0)*12);
+  // Auto-create/update commission record
+  const hasCommData=isLease?(obj.lease_term_years&&rateSchedule&&rateSchedule.some(r=>r>0)):obj.comm_rate;
+  if(hasCommData){
+    let dealVal, effectiveRate;
+    if(isLease){
+      // Compute total gross commission across the full lease term, then back into an effective blended rate
+      let totalGross=0, totalRentSum=0, rentYear=(obj.value||0)*(obj.size_sf||0)*12;
+      for(let y=1;y<=obj.lease_term_years;y++){
+        const rate=rateSchedule[y-1]||0;
+        totalGross+=rentYear*(rate/100);
+        totalRentSum+=rentYear;
+        rentYear=rentYear*(1+(obj.annual_escalation||0)/100);
+      }
+      dealVal=totalRentSum;
+      effectiveRate=totalRentSum?+(totalGross/totalRentSum*100).toFixed(4):0;
+    } else {
+      dealVal=obj.value;
+      effectiveRate=obj.comm_rate;
+    }
     const commRecord={
       id:uid(),
       deal_id:obj.id,
       sale:dealVal,
-      rate:obj.comm_rate,
+      rate:effectiveRate,
       split:obj.cobroke_split||100,
       partner_fee:obj.partner_fee||0,
       status:'Expected',
       close_date:null,
-      notes:'Auto-generated from deal'
+      notes:isLease?'Auto-generated from deal (multi-year lease schedule)':'Auto-generated from deal'
     };
     const existing=commissions.find(c=>c.deal_id===obj.id);
     if(existing){
-      await sb.from('commissions').update({sale:commRecord.sale,rate:commRecord.rate,split:commRecord.split,partner_fee:commRecord.partner_fee}).eq('id',existing.id);
+      await sb.from('commissions').update({sale:commRecord.sale,rate:commRecord.rate,split:commRecord.split,partner_fee:commRecord.partner_fee,notes:commRecord.notes}).eq('id',existing.id);
       commissions=commissions.map(c=>c.id===existing.id?{...c,...commRecord,id:existing.id}:c);
     } else {
       await sb.from('commissions').insert(commRecord);
