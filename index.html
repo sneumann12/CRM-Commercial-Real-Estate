@@ -119,7 +119,7 @@ textarea{resize:vertical;min-height:70px}
 .status-Expected{background:var(--amber-light);color:var(--amber);padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600}
 .status-Received{background:var(--green-light);color:var(--green);padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600}
 .status-Partial{background:var(--accent-light);color:var(--accent);padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600}
-.comm-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.25rem}
+.comm-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.25rem}
 .email-preview{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:13px;font-size:13px;line-height:1.6;white-space:pre-wrap;min-height:80px;color:var(--text)}
 .export-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:10px;box-shadow:var(--shadow)}
 .export-card h3{font-size:14px;font-weight:600;margin-bottom:4px;color:var(--text)}
@@ -602,6 +602,16 @@ tr:hover td{background:var(--accent-light);cursor:pointer}
       <div class="field"><label>Close / execution date</label><input type="date" id="comm-date"></div>
     </div>
     <div class="field"><label>Partner / referral fee (% of my gross)</label><input type="number" id="comm-partner-fee" step="1" placeholder="e.g. 50" oninput="calcComm()"></div>
+    <div class="field"><label>Probability of closing (%)</label>
+      <select id="comm-probability" onchange="calcComm()">
+        <option value="10">10% — Early stage</option>
+        <option value="25">25% — Possible</option>
+        <option value="50">50% — Likely</option>
+        <option value="75">75% — Probable</option>
+        <option value="90">90% — Near certain</option>
+        <option value="100" selected>100% — Closed / executed</option>
+      </select>
+    </div>
     <div style="background:var(--surface2);border-radius:8px;padding:10px;margin-bottom:12px;font-size:13px" id="comm-calc">Enter value and rate to calculate.</div>
     <div class="field"><label>Status</label>
       <select id="comm-status"><option>Expected</option><option>Partial</option><option>Received</option></select>
@@ -1279,17 +1289,22 @@ function renderCommissions(){
   const filter=document.getElementById('comm-filter').value;
   const filtered=filter?commissions.filter(c=>c.status===filter):commissions;
   const totalGross=commissions.reduce((s,c)=>s+(c.sale*c.rate/100)*((c.split||100)/100)*(1-((c.partner_fee||0)/100)),0);
+  const totalWeighted=commissions.reduce((s,c)=>s+(c.sale*c.rate/100)*((c.split||100)/100)*(1-((c.partner_fee||0)/100))*((c.probability||100)/100),0);
   const totalReceived=commissions.filter(c=>c.status==='Received').reduce((s,c)=>s+(c.sale*c.rate/100)*((c.split||100)/100)*(1-((c.partner_fee||0)/100)),0);
   document.getElementById('comm-stats').innerHTML=`
     <div class="stat"><div class="stat-label">Total</div><div class="stat-val">${commissions.length}</div></div>
     <div class="stat" style="border-top-color:var(--gold)"><div class="stat-label">Gross pipeline</div><div class="stat-val gold-val">${fmt(totalGross)}</div></div>
+    <div class="stat" style="border-top-color:var(--gold)"><div class="stat-label">Weighted forecast</div><div class="stat-val gold-val">${fmt(totalWeighted)}</div></div>
     <div class="stat" style="border-top-color:var(--green)"><div class="stat-label">Received</div><div class="stat-val" style="color:var(--green)">${fmt(totalReceived)}</div></div>`;
   const list=document.getElementById('comm-list');
   if(!filtered.length){list.innerHTML='<div class="empty">No commissions yet.</div>';return;}
   list.innerHTML=filtered.map(c=>{
     const d=deals.find(x=>x.id===c.deal_id);
     const gross=(c.sale*c.rate/100)*((c.split||100)/100)*(1-((c.partner_fee||0)/100));
+    const probability=c.probability||100;
+    const weighted=gross*(probability/100);
     const dt=c.close_date?new Date(c.close_date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'';
+    const probColor=probability>=90?'var(--green)':probability>=50?'var(--gold)':'var(--text3)';
     return `<div class="comm-row" onclick="openCommModal('${c.id}')">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div><div style="font-size:13px;font-weight:500">${d?d.name:'Unknown deal'}</div>
@@ -1297,6 +1312,7 @@ function renderCommissions(){
         ${c.notes?'<div style="font-size:11px;color:var(--text3);margin-top:2px">'+c.notes+'</div>':''}</div>
         <div style="text-align:right;flex-shrink:0;margin-left:12px">
           <div style="font-size:15px;font-weight:600;color:var(--gold)">${fmt(gross)}</div>
+          <div style="font-size:11px;color:${probColor};font-weight:500;margin-top:1px">${probability}% · ${fmt(weighted)} weighted</div>
           <span class="status-${c.status}">${c.status}</span>
         </div>
       </div>
@@ -1309,11 +1325,13 @@ function calcComm(){
   const rate=+document.getElementById('comm-rate').value||0;
   const split=+document.getElementById('comm-split').value||100;
   const partnerFee=+document.getElementById('comm-partner-fee').value||0;
+  const probability=+document.getElementById('comm-probability').value||100;
   const gross=sale*rate/100;
   const myGross=gross*(split/100);
   const net=myGross*(1-(partnerFee/100));
+  const weighted=net*(probability/100);
   document.getElementById('comm-calc').innerHTML=sale&&rate
-    ?`Gross: <strong style="color:var(--gold)">${fmt(gross)}</strong> &nbsp;·&nbsp; Your side (${split}%): <strong style="color:var(--gold)">${fmt(myGross)}</strong>${partnerFee?` &nbsp;·&nbsp; Your net (-${partnerFee}%): <strong style="color:var(--gold)">${fmt(net)}</strong>`:''}`
+    ?`Gross: <strong style="color:var(--gold)">${fmt(gross)}</strong> &nbsp;·&nbsp; Your side (${split}%): <strong style="color:var(--gold)">${fmt(myGross)}</strong>${partnerFee?` &nbsp;·&nbsp; Your net (-${partnerFee}%): <strong style="color:var(--gold)">${fmt(net)}</strong>`:''}<br><span style="color:var(--text3)">Weighted (${probability}% probability):</span> <strong style="color:var(--gold)">${fmt(weighted)}</strong>`
     :'Enter value and rate to calculate.';
 }
 
@@ -1808,6 +1826,7 @@ function openCommModal(id){
     document.getElementById('comm-rate').value=c.rate||'';
     document.getElementById('comm-split').value=c.split||50;
     document.getElementById('comm-partner-fee').value=c.partner_fee||'';
+    document.getElementById('comm-probability').value=c.probability||100;
     document.getElementById('comm-date').value=c.close_date||'';
     document.getElementById('comm-status').value=c.status||'Expected';
     document.getElementById('comm-notes').value=c.notes||'';
@@ -1817,6 +1836,7 @@ function openCommModal(id){
     document.getElementById('comm-modal-title').textContent='Add commission';
     ['comm-id','comm-sale','comm-rate','comm-partner-fee','comm-date','comm-notes'].forEach(f=>document.getElementById(f).value='');
     document.getElementById('comm-split').value=50;
+    document.getElementById('comm-probability').value=100;
     document.getElementById('comm-status').value='Expected';
     document.getElementById('comm-delete-btn').style.display='none';
     document.getElementById('comm-calc').textContent='Enter value and rate to calculate.';
@@ -1825,7 +1845,7 @@ function openCommModal(id){
 }
 async function saveComm(){
   const id=document.getElementById('comm-id').value;
-  const obj={id:id||uid(),deal_id:document.getElementById('comm-deal').value||null,sale:+document.getElementById('comm-sale').value,rate:+document.getElementById('comm-rate').value,split:+document.getElementById('comm-split').value,partner_fee:+document.getElementById('comm-partner-fee').value||0,close_date:document.getElementById('comm-date').value||null,status:document.getElementById('comm-status').value,notes:document.getElementById('comm-notes').value};
+  const obj={id:id||uid(),deal_id:document.getElementById('comm-deal').value||null,sale:+document.getElementById('comm-sale').value,rate:+document.getElementById('comm-rate').value,split:+document.getElementById('comm-split').value,partner_fee:+document.getElementById('comm-partner-fee').value||0,probability:+document.getElementById('comm-probability').value||100,close_date:document.getElementById('comm-date').value||null,status:document.getElementById('comm-status').value,notes:document.getElementById('comm-notes').value};
   if(!obj.sale||!obj.rate){alert('Transaction value and rate are required.');return;}
   if(id){await sb.from('commissions').update(obj).eq('id',id);commissions=commissions.map(c=>c.id===id?obj:c);}
   else{await sb.from('commissions').insert(obj);commissions.push(obj);}
