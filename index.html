@@ -598,9 +598,10 @@ tr:hover td{background:var(--accent-light);cursor:pointer}
       <div class="field"><label>Commission rate (%)</label><input type="number" id="comm-rate" step="0.1" oninput="calcComm()"></div>
     </div>
     <div class="grid2">
-      <div class="field"><label>Split split (%)</label><input type="number" id="comm-split" step="1" oninput="calcComm()"></div>
+      <div class="field"><label>Split (% my side)</label><input type="number" id="comm-split" step="1" oninput="calcComm()"></div>
       <div class="field"><label>Close / execution date</label><input type="date" id="comm-date"></div>
     </div>
+    <div class="field"><label>Partner / referral fee (% of my gross)</label><input type="number" id="comm-partner-fee" step="1" placeholder="e.g. 50" oninput="calcComm()"></div>
     <div style="background:var(--surface2);border-radius:8px;padding:10px;margin-bottom:12px;font-size:13px" id="comm-calc">Enter value and rate to calculate.</div>
     <div class="field"><label>Status</label>
       <select id="comm-status"><option>Expected</option><option>Partial</option><option>Received</option></select>
@@ -1292,7 +1293,7 @@ function renderCommissions(){
     return `<div class="comm-row" onclick="openCommModal('${c.id}')">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div><div style="font-size:13px;font-weight:500">${d?d.name:'Unknown deal'}</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:2px">${c.rate}% · ${c.split||100}% side${dt?' · '+dt:''}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${c.rate}% · ${c.split||100}% side${c.partner_fee?' · -'+c.partner_fee+'% partner':''}${dt?' · '+dt:''}</div>
         ${c.notes?'<div style="font-size:11px;color:var(--text3);margin-top:2px">'+c.notes+'</div>':''}</div>
         <div style="text-align:right;flex-shrink:0;margin-left:12px">
           <div style="font-size:15px;font-weight:600;color:var(--gold)">${fmt(gross)}</div>
@@ -1307,9 +1308,12 @@ function calcComm(){
   const sale=+document.getElementById('comm-sale').value||0;
   const rate=+document.getElementById('comm-rate').value||0;
   const split=+document.getElementById('comm-split').value||100;
-  const gross=sale*rate/100;const net=gross*(split/100);
+  const partnerFee=+document.getElementById('comm-partner-fee').value||0;
+  const gross=sale*rate/100;
+  const myGross=gross*(split/100);
+  const net=myGross*(1-(partnerFee/100));
   document.getElementById('comm-calc').innerHTML=sale&&rate
-    ?`Gross: <strong style="color:var(--gold)">${fmt(gross)}</strong> &nbsp;·&nbsp; Your side (${split}%): <strong style="color:var(--gold)">${fmt(net)}</strong>`
+    ?`Gross: <strong style="color:var(--gold)">${fmt(gross)}</strong> &nbsp;·&nbsp; Your side (${split}%): <strong style="color:var(--gold)">${fmt(myGross)}</strong>${partnerFee?` &nbsp;·&nbsp; Your net (-${partnerFee}%): <strong style="color:var(--gold)">${fmt(net)}</strong>`:''}`
     :'Enter value and rate to calculate.';
 }
 
@@ -1803,6 +1807,7 @@ function openCommModal(id){
     document.getElementById('comm-sale').value=c.sale||'';
     document.getElementById('comm-rate').value=c.rate||'';
     document.getElementById('comm-split').value=c.split||50;
+    document.getElementById('comm-partner-fee').value=c.partner_fee||'';
     document.getElementById('comm-date').value=c.close_date||'';
     document.getElementById('comm-status').value=c.status||'Expected';
     document.getElementById('comm-notes').value=c.notes||'';
@@ -1810,7 +1815,7 @@ function openCommModal(id){
     calcComm();
   }else{
     document.getElementById('comm-modal-title').textContent='Add commission';
-    ['comm-id','comm-sale','comm-rate','comm-date','comm-notes'].forEach(f=>document.getElementById(f).value='');
+    ['comm-id','comm-sale','comm-rate','comm-partner-fee','comm-date','comm-notes'].forEach(f=>document.getElementById(f).value='');
     document.getElementById('comm-split').value=50;
     document.getElementById('comm-status').value='Expected';
     document.getElementById('comm-delete-btn').style.display='none';
@@ -1820,7 +1825,7 @@ function openCommModal(id){
 }
 async function saveComm(){
   const id=document.getElementById('comm-id').value;
-  const obj={id:id||uid(),deal_id:document.getElementById('comm-deal').value||null,sale:+document.getElementById('comm-sale').value,rate:+document.getElementById('comm-rate').value,split:+document.getElementById('comm-split').value,close_date:document.getElementById('comm-date').value||null,status:document.getElementById('comm-status').value,notes:document.getElementById('comm-notes').value};
+  const obj={id:id||uid(),deal_id:document.getElementById('comm-deal').value||null,sale:+document.getElementById('comm-sale').value,rate:+document.getElementById('comm-rate').value,split:+document.getElementById('comm-split').value,partner_fee:+document.getElementById('comm-partner-fee').value||0,close_date:document.getElementById('comm-date').value||null,status:document.getElementById('comm-status').value,notes:document.getElementById('comm-notes').value};
   if(!obj.sale||!obj.rate){alert('Transaction value and rate are required.');return;}
   if(id){await sb.from('commissions').update(obj).eq('id',id);commissions=commissions.map(c=>c.id===id?obj:c);}
   else{await sb.from('commissions').insert(obj);commissions.push(obj);}
