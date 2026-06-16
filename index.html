@@ -627,7 +627,7 @@ function switchPipeline(type,el){
 
 function renderDashboard(){
   // Stats
-  const activeDeals=deals.filter(d=>d.stage!=='Closed'&&d.&&d.stage!=='Dead');
+  const activeDeals=deals.filter(d=>d.stage!=='Closed'&&d.stage!=='Dead');
   const totalVal=deals.filter(d=>d.stage!=='Dead').reduce((s,d)=>{
     const dv=d.deal_type==='Leasing'?(d.value||0)*(d.size_sf||0)*12:(d.value||0);
     return s+dv;
@@ -865,7 +865,7 @@ function renderPipeline(){
   const totalVal=deals.reduce((s,d)=>s+(+d.value||0),0);
   document.getElementById('stat-total').textContent=deals.length;
   document.getElementById('stat-val').textContent='$'+Math.round(totalVal).toLocaleString();
-  document.getElementById('stat-active').textContent=deals.filter(d=>d.stage!=='Closed'&&d.&&d.stage!=='Dead').length;
+  document.getElementById('stat-active').textContent=deals.filter(d=>d.stage!=='Closed'&&d.stage!=='Dead').length;
   document.getElementById('stat-closed').textContent=deals.filter(d=>d.stage==='Closed').length;
   const stages=activePipeline==='sales'?SALES_STAGES:LEASE_STAGES;
   const pipeline=activePipeline==='sales'?'Sales':'Leasing';
