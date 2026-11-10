@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CRE CRM – Stefan Neumann</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 :root{
   --bg:#EEF2F7;
@@ -171,6 +173,7 @@ tr:hover td{background:var(--accent-light);cursor:pointer}
     <button class="tab" onclick="switchTab('leads',this)">Leads</button>
     <button class="tab" onclick="switchTab('offmarket',this)">Off Market</button>
     <button class="tab" onclick="switchTab('comps',this)">Comps</button>
+    <button class="tab" onclick="switchTab('map',this)">Map</button>
     <button class="tab" onclick="switchTab('commissions',this)">Commissions</button>
     <button class="tab" onclick="switchTab('export',this)">Export</button>
   </div>
@@ -327,15 +330,47 @@ tr:hover td{background:var(--accent-light);cursor:pointer}
   </div>
 </div>
 
+<!-- MAP -->
+<div class="view" id="view-map">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:8px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <span class="tag-pill sel" id="map-toggle-deals" onclick="toggleMapLayer('deals',this)" style="background:var(--accent);border-color:var(--accent)">● Deals</span>
+      <span class="tag-pill sel" id="map-toggle-offmarket" onclick="toggleMapLayer('offmarket',this)" style="background:var(--gold);border-color:var(--gold)">● Off Market</span>
+      <span class="tag-pill sel" id="map-toggle-leads" onclick="toggleMapLayer('leads',this)" style="background:var(--green);border-color:var(--green)">● Leads</span>
+    </div>
+    <button class="btn btn-sm" onclick="geocodeAllPending()">📍 Geocode missing addresses</button>
+  </div>
+  <div id="map-status" style="font-size:12px;color:var(--text3);margin-bottom:8px"></div>
+  <div id="map-container" style="height:600px;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);box-shadow:var(--shadow)"></div>
+</div>
+
 <!-- LEADS -->
 <div class="view" id="view-leads">
   <div class="search-row">
-    <input type="text" placeholder="Search leads..." id="lead-search" oninput="renderLeads()">
+    <input type="text" placeholder="Search address, owner, or listing broker..." id="lead-search" oninput="renderLeads()">
+    <select id="lead-type-filter" onchange="renderLeads()" style="width:auto">
+      <option value="">All types</option>
+      <option>Owner lead</option>
+      <option>Stale listing</option>
+    </select>
+    <select id="lead-kind-filter" onchange="renderLeads()" style="width:auto">
+      <option value="">Lease + Sale</option>
+      <option>Lease</option>
+      <option>Sale</option>
+    </select>
+    <select id="lead-status-filter" onchange="renderLeads()" style="width:auto">
+      <option value="">All statuses</option>
+      <option>Not contacted</option>
+      <option>Contacted</option>
+      <option>Pitched</option>
+      <option>Won</option>
+      <option>Lost</option>
+    </select>
     <button class="btn btn-cta" onclick="openLeadModal()">+ Add lead</button>
   </div>
-  <div style="font-size:12px;color:var(--text3);margin-bottom:1rem">Prospects not yet in the active pipeline. Hit "→ Deal" to promote when ready.</div>
+  <div style="font-size:12px;color:var(--text3);margin-bottom:1rem">Owner leads and stale listings you want to chase. Hit "→ Deal" to promote one to the pipeline when you win it.</div>
   <div class="table-wrap">
-    <table><thead><tr><th>Address</th><th>Owner</th><th>Contact</th><th>Notes</th><th>Added</th><th></th></tr></thead>
+    <table><thead><tr><th>Address</th><th>Type</th><th>Size</th><th>Asking</th><th>Listing broker</th><th>Days listed</th><th>Status</th><th>Owner / contact</th><th>Last contact</th><th>Notes</th><th>Added</th><th></th></tr></thead>
     <tbody id="lead-body"></tbody></table>
   </div>
 </div>
@@ -541,6 +576,28 @@ tr:hover td{background:var(--accent-light);cursor:pointer}
     <div class="modal-title"><span id="lead-modal-title">Add lead</span><button class="close-btn" onclick="closeModal('lead-modal')">×</button></div>
     <input type="hidden" id="lead-id">
     <div class="field"><label>Property address</label><input type="text" id="lead-address" placeholder="e.g. 3500 Aviation Blvd, Redondo Beach"></div>
+    <div class="grid2">
+      <div class="field"><label>Type</label>
+        <select id="lead-type"><option>Owner lead</option><option>Stale listing</option></select>
+      </div>
+      <div class="field"><label>Lease or sale</label>
+        <select id="lead-kind" onchange="updateLeadAskingLabel()"><option value="">— not set —</option><option>Lease</option><option>Sale</option></select>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label id="lead-asking-label">Asking price / rent</label><input type="number" id="lead-asking" step="0.01" placeholder="e.g. 4.50 or 3200000"></div>
+      <div class="field"><label>Size (SF)</label><input type="number" id="lead-sf" placeholder="e.g. 5000"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Listing brokerage / broker</label><input type="text" id="lead-listing-broker" placeholder="e.g. CBRE – Jane Smith"></div>
+      <div class="field"><label>Date listed</label><input type="date" id="lead-date-listed"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Status</label>
+        <select id="lead-status"><option>Not contacted</option><option>Contacted</option><option>Pitched</option><option>Won</option><option>Lost</option></select>
+      </div>
+      <div class="field"><label>Last contact</label><input type="date" id="lead-last-contact"></div>
+    </div>
     <div class="field"><label>Owner name</label><input type="text" id="lead-owner-name"></div>
     <div class="grid2">
       <div class="field"><label>Owner email</label><input type="email" id="lead-owner-email"></div>
@@ -779,6 +836,7 @@ function switchTab(t,el){
   if(t==='pipeline')renderPipeline();
   if(t==='todos')renderTodos();
   if(t==='comps')renderLeaseComps();
+  if(t==='map')setTimeout(renderMap,50);
   if(t==='clients')renderClients();
   if(t==='contacts')renderContacts();
   if(t==='leads')renderLeads();
@@ -1204,19 +1262,65 @@ function renderContacts(){
     </div>`}).join('');
 }
 
+const LEAD_STALE_DAYS=90; // days on market before a listing turns red
+const LEAD_STATUS_STYLES={
+  'Not contacted':'background:var(--surface2);color:var(--text3);border:1px solid var(--border)',
+  'Contacted':'background:var(--accent-light);color:var(--accent)',
+  'Pitched':'background:var(--gold-light);color:var(--gold)',
+  'Won':'background:var(--green-light);color:var(--green)',
+  'Lost':'background:var(--red-light);color:var(--red)'
+};
+
+function updateLeadAskingLabel(){
+  const kind=document.getElementById('lead-kind').value;
+  document.getElementById('lead-asking-label').textContent=
+    kind==='Lease'?'Asking rent ($/SF/month)':kind==='Sale'?'Asking price ($)':'Asking price / rent';
+}
+
+function leadDaysListed(l){
+  if(!l.date_listed)return null;
+  return Math.floor((Date.now()-new Date(l.date_listed+'T12:00:00'))/(1000*60*60*24));
+}
+
 function renderLeads(){
   const q=(document.getElementById('lead-search').value||'').toLowerCase();
-  const filtered=leads.filter(l=>!q||l.address.toLowerCase().includes(q)||(l.owner_name||'').toLowerCase().includes(q));
+  const typeF=document.getElementById('lead-type-filter').value;
+  const kindF=document.getElementById('lead-kind-filter').value;
+  const statusF=document.getElementById('lead-status-filter').value;
+  const filtered=leads.filter(l=>{
+    const type=l.lead_type||'Owner lead';
+    const status=l.status||'Not contacted';
+    const matchQ=!q||(l.address||'').toLowerCase().includes(q)||(l.owner_name||'').toLowerCase().includes(q)||(l.listing_broker||'').toLowerCase().includes(q);
+    return matchQ&&(!typeF||type===typeF)&&(!kindF||l.deal_kind===kindF)&&(!statusF||status===statusF);
+  });
   const tbody=document.getElementById('lead-body');
-  if(!filtered.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text3)">No leads yet.</td></tr>';return;}
+  if(!filtered.length){tbody.innerHTML='<tr><td colspan="12" style="text-align:center;padding:2rem;color:var(--text3)">'+(leads.length?'No leads match these filters.':'No leads yet.')+'</td></tr>';return;}
   tbody.innerHTML=filtered.map(l=>{
-    const dt=new Date(l.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    const added=l.created_at?new Date(l.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—';
+    const type=l.lead_type||'Owner lead';
+    const status=l.status||'Not contacted';
+    const days=leadDaysListed(l);
+    const stale=days!==null&&days>LEAD_STALE_DAYS&&status!=='Won'&&status!=='Lost';
+    const listedStr=l.date_listed?new Date(l.date_listed+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'';
+    const lastContact=l.last_contact?new Date(l.last_contact+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—';
+    const asking=l.asking_value
+      ?(l.deal_kind==='Lease'?'$'+Number(l.asking_value).toLocaleString()+'/SF/mo':fmt(l.asking_value))
+      :'—';
+    const ownerCell=(l.owner_name?'<div>'+l.owner_name+'</div>':'')
+      +((l.owner_email||l.owner_phone)?'<div style="font-size:11px;color:var(--text3)">'+[l.owner_email,l.owner_phone].filter(Boolean).join('<br>')+'</div>':'')
+      ||'—';
     return `<tr onclick="openLeadModal('${l.id}')">
       <td style="font-weight:500">${l.address}</td>
-      <td>${l.owner_name||'—'}</td>
-      <td style="font-size:12px">${l.owner_email||''}${l.owner_email&&l.owner_phone?'<br>':''}${l.owner_phone||''}</td>
-      <td style="color:#666;max-width:200px">${l.notes||''}</td>
-      <td style="white-space:nowrap;color:var(--text3)">${dt}</td>
+      <td style="white-space:nowrap"><span class="type-pill">${type}${l.deal_kind?' · '+l.deal_kind:''}</span></td>
+      <td style="white-space:nowrap">${l.size_sf?fmtSF(l.size_sf):'—'}</td>
+      <td style="white-space:nowrap;color:var(--gold);font-weight:600">${asking}</td>
+      <td style="font-size:12px">${l.listing_broker||'—'}</td>
+      <td style="white-space:nowrap;${stale?'color:var(--red);font-weight:600':''}">${days!==null?days+'d'+(stale?' ⚠':''):'—'}${listedStr?'<br><span style="font-size:11px;font-weight:400;color:var(--text3)">'+listedStr+'</span>':''}</td>
+      <td><span style="font-size:11px;padding:2px 9px;border-radius:20px;font-weight:600;white-space:nowrap;${LEAD_STATUS_STYLES[status]||''}">${status}</span></td>
+      <td style="font-size:12px">${ownerCell}</td>
+      <td style="white-space:nowrap;color:var(--text3)">${lastContact}</td>
+      <td style="color:var(--text2);max-width:200px;font-size:12px">${l.notes||''}</td>
+      <td style="white-space:nowrap;color:var(--text3)">${added}</td>
       <td><button class="promote-btn" onclick="event.stopPropagation();promoteLeadById('${l.id}')">→ Deal</button></td>
     </tr>`;
   }).join('');
@@ -1338,7 +1442,7 @@ function calcComm(){
 
 function updateStageOptions(){
   const pipeline=document.getElementById('deal-pipeline').value;
-  const stages=pipeline==='Sales'?SALES_STAGES:LEASE_STAGES;
+  const stages=[...(pipeline==='Sales'?SALES_STAGES:LEASE_STAGES),'Dead'];
   const sel=document.getElementById('deal-stage');
   const cur=sel.value;
   sel.innerHTML=stages.map(s=>`<option value="${s}">${s}</option>`).join('');
@@ -1593,6 +1697,15 @@ async function saveDeal(){
     }
   }
   closeModal('deal-modal');renderPipeline();if(document.getElementById('view-dashboard').classList.contains('active'))renderDashboard();showToast('Deal saved.');
+  // Geocode in background if no coords yet (doesn't block UI)
+  if(!obj.lat&&obj.name){
+    geocodeAddress(obj.name).then(coords=>{
+      if(coords){
+        sb.from('deals').update({lat:coords.lat,lng:coords.lng}).eq('id',obj.id);
+        const d=deals.find(x=>x.id===obj.id);if(d){d.lat=coords.lat;d.lng=coords.lng;}
+      }
+    });
+  }
 }
 async function deleteDeal(){
   if(!confirm('Delete this deal?'))return;
@@ -1728,6 +1841,14 @@ function openLeadModal(id){
     document.getElementById('lead-modal-title').textContent='Edit lead';
     document.getElementById('lead-id').value=l.id;
     document.getElementById('lead-address').value=l.address;
+    document.getElementById('lead-type').value=l.lead_type||'Owner lead';
+    document.getElementById('lead-kind').value=l.deal_kind||'';
+    document.getElementById('lead-asking').value=l.asking_value||'';
+    document.getElementById('lead-sf').value=l.size_sf||'';
+    document.getElementById('lead-listing-broker').value=l.listing_broker||'';
+    document.getElementById('lead-date-listed').value=l.date_listed||'';
+    document.getElementById('lead-status').value=l.status||'Not contacted';
+    document.getElementById('lead-last-contact').value=l.last_contact||'';
     document.getElementById('lead-owner-name').value=l.owner_name||'';
     document.getElementById('lead-owner-email').value=l.owner_email||'';
     document.getElementById('lead-owner-phone').value=l.owner_phone||'';
@@ -1736,22 +1857,57 @@ function openLeadModal(id){
     document.getElementById('lead-promote-btn').style.display='inline-block';
   }else{
     document.getElementById('lead-modal-title').textContent='Add lead';
-    ['lead-id','lead-address','lead-owner-name','lead-owner-email','lead-owner-phone','lead-notes'].forEach(f=>document.getElementById(f).value='');
+    ['lead-id','lead-address','lead-asking','lead-sf','lead-listing-broker','lead-date-listed','lead-last-contact','lead-owner-name','lead-owner-email','lead-owner-phone','lead-notes'].forEach(f=>document.getElementById(f).value='');
+    document.getElementById('lead-type').value='Owner lead';
+    document.getElementById('lead-kind').value='';
+    document.getElementById('lead-status').value='Not contacted';
     document.getElementById('lead-delete-btn').style.display='none';
     document.getElementById('lead-promote-btn').style.display='none';
   }
+  updateLeadAskingLabel();
   document.getElementById('lead-modal').classList.add('open');
 }
 async function saveLead(){
   const id=document.getElementById('lead-id').value;
-  const obj={id:id||uid(),address:document.getElementById('lead-address').value,owner_name:document.getElementById('lead-owner-name').value,owner_email:document.getElementById('lead-owner-email').value,owner_phone:document.getElementById('lead-owner-phone').value,notes:document.getElementById('lead-notes').value};
+  const existing=id?leads.find(l=>l.id===id):null;
+  const obj={
+    id:id||uid(),
+    address:document.getElementById('lead-address').value,
+    lead_type:document.getElementById('lead-type').value,
+    deal_kind:document.getElementById('lead-kind').value||null,
+    asking_value:+document.getElementById('lead-asking').value||null,
+    size_sf:+document.getElementById('lead-sf').value||null,
+    listing_broker:document.getElementById('lead-listing-broker').value,
+    date_listed:document.getElementById('lead-date-listed').value||null,
+    status:document.getElementById('lead-status').value,
+    last_contact:document.getElementById('lead-last-contact').value||null,
+    owner_name:document.getElementById('lead-owner-name').value,
+    owner_email:document.getElementById('lead-owner-email').value,
+    owner_phone:document.getElementById('lead-owner-phone').value,
+    notes:document.getElementById('lead-notes').value
+  };
   if(!obj.address){alert('Address is required.');return;}
-  if(id){await sb.from('leads').update(obj).eq('id',id);leads=leads.map(l=>l.id===id?obj:l);}
-  else{await sb.from('leads').insert(obj);leads.push(obj);}
+  const res=id?await sb.from('leads').update(obj).eq('id',id):await sb.from('leads').insert(obj);
+  if(res.error){
+    alert('Could not save this lead: '+res.error.message+'\n\nIf you just updated the CRM, make sure the latest SQL update was run in Supabase first.');
+    return;
+  }
+  if(id){leads=leads.map(l=>l.id===id?{...l,...obj}:l);}
+  else{leads.push(obj);}
   // Sync owner to contacts if name/email/phone provided
   if(obj.owner_name||obj.owner_email||obj.owner_phone)
     await syncToContacts(obj.owner_name, obj.owner_email, obj.owner_phone, 'Other', '', 'Leads');
   closeModal('lead-modal');renderLeads();showToast('Lead saved.');
+  const saved=leads.find(l=>l.id===obj.id);
+  const addressChanged=existing&&existing.address!==obj.address;
+  if(obj.address&&saved&&(!saved.lat||addressChanged)){
+    geocodeAddress(obj.address).then(coords=>{
+      if(coords){
+        sb.from('leads').update({lat:coords.lat,lng:coords.lng}).eq('id',obj.id);
+        saved.lat=coords.lat;saved.lng=coords.lng;
+      }
+    });
+  }
 }
 async function deleteLead(){
   if(!confirm('Delete this lead?'))return;
@@ -1760,16 +1916,29 @@ async function deleteLead(){
   leads=leads.filter(l=>l.id!==id);
   closeModal('lead-modal');renderLeads();showToast('Lead deleted.');
 }
-function promoteLead(){
-  const address=document.getElementById('lead-address').value;
-  closeModal('lead-modal');openDealModal();
-  document.getElementById('deal-name').value=address;
+function prefillDealFromLead(l){
+  openDealModal();
+  document.getElementById('deal-name').value=l.address;
+  if(l.deal_kind){
+    document.getElementById('deal-pipeline').value=l.deal_kind==='Lease'?'Leasing':'Sales';
+    updateStageOptions();
+  }
+  if(l.size_sf)document.getElementById('deal-sf').value=l.size_sf;
+  updateDealCalc();
   showToast('Lead promoted — fill in deal details and save.');
+}
+function promoteLead(){
+  const l={
+    address:document.getElementById('lead-address').value,
+    deal_kind:document.getElementById('lead-kind').value,
+    size_sf:+document.getElementById('lead-sf').value||null
+  };
+  closeModal('lead-modal');
+  prefillDealFromLead(l);
 }
 function promoteLeadById(id){
   const l=leads.find(x=>x.id===id);if(!l)return;
-  openDealModal();document.getElementById('deal-name').value=l.address;
-  showToast('Lead promoted — fill in deal details and save.');
+  prefillDealFromLead(l);
 }
 
 function openOMModal(id){
@@ -1806,6 +1975,14 @@ async function saveOM(){
   if(obj.owner_name||obj.owner_email||obj.owner_phone)
     await syncToContacts(obj.owner_name, obj.owner_email, obj.owner_phone, 'Other', '', 'Off Market');
   closeModal('om-modal');renderOffMarket();showToast('Property saved.');
+  if(!obj.lat&&obj.address){
+    geocodeAddress(obj.address).then(coords=>{
+      if(coords){
+        sb.from('off_market').update({lat:coords.lat,lng:coords.lng}).eq('id',obj.id);
+        const o=offMarket.find(x=>x.id===obj.id);if(o){o.lat=coords.lat;o.lng=coords.lng;}
+      }
+    });
+  }
 }
 async function deleteOM(){
   if(!confirm('Delete this property?'))return;
@@ -1858,6 +2035,103 @@ async function deleteComm(){
   await sb.from('commissions').delete().eq('id',id);
   commissions=commissions.filter(c=>c.id!==id);
   closeModal('comm-modal');renderCommissions();showToast('Commission deleted.');
+}
+
+// MAP
+let mapInstance=null;
+let mapLayers={deals:true,offmarket:true,leads:true};
+let mapMarkers=[];
+
+async function geocodeAddress(address){
+  if(!address)return null;
+  try{
+    const res=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(address+', CA'));
+    const data=await res.json();
+    if(data&&data.length){
+      return{lat:parseFloat(data[0].lat),lng:parseFloat(data[0].lon)};
+    }
+  }catch(e){console.error('Geocode error',e);}
+  return null;
+}
+
+async function geocodeAllPending(){
+  const statusEl=document.getElementById('map-status');
+  const toGeocode=[];
+  deals.filter(d=>!d.lat&&!d.lng&&d.name).forEach(d=>toGeocode.push({type:'deals',id:d.id,address:d.name}));
+  offMarket.filter(o=>!o.lat&&!o.lng&&o.address).forEach(o=>toGeocode.push({type:'off_market',id:o.id,address:o.address}));
+  leads.filter(l=>!l.lat&&!l.lng&&l.address).forEach(l=>toGeocode.push({type:'leads',id:l.id,address:l.address}));
+  if(!toGeocode.length){statusEl.textContent='All addresses already geocoded.';return;}
+  statusEl.textContent=`Geocoding ${toGeocode.length} address${toGeocode.length!==1?'es':''}... this respects a polite 1 request/second rate limit, please wait.`;
+  for(let i=0;i<toGeocode.length;i++){
+    const item=toGeocode[i];
+    statusEl.textContent=`Geocoding ${i+1} of ${toGeocode.length}: ${item.address}`;
+    const coords=await geocodeAddress(item.address);
+    if(coords){
+      await sb.from(item.type).update({lat:coords.lat,lng:coords.lng}).eq('id',item.id);
+      if(item.type==='deals'){const d=deals.find(x=>x.id===item.id);if(d){d.lat=coords.lat;d.lng=coords.lng;}}
+      if(item.type==='off_market'){const o=offMarket.find(x=>x.id===item.id);if(o){o.lat=coords.lat;o.lng=coords.lng;}}
+      if(item.type==='leads'){const l=leads.find(x=>x.id===item.id);if(l){l.lat=coords.lat;l.lng=coords.lng;}}
+    }
+    await new Promise(r=>setTimeout(r,1100)); // respect Nominatim rate limit
+  }
+  statusEl.textContent=`Done. Geocoded ${toGeocode.length} address${toGeocode.length!==1?'es':''}.`;
+  renderMap();
+}
+
+function toggleMapLayer(layer,el){
+  mapLayers[layer]=!mapLayers[layer];
+  el.classList.toggle('sel');
+  el.style.opacity=mapLayers[layer]?'1':'0.4';
+  renderMap();
+}
+
+function renderMap(){
+  const container=document.getElementById('map-container');
+  if(!container)return;
+  if(!mapInstance){
+    mapInstance=L.map('map-container').setView([33.8847,-118.3964],11); // Manhattan Beach area default
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+      attribution:'© OpenStreetMap contributors',
+      maxZoom:19
+    }).addTo(mapInstance);
+  }
+  // Clear existing markers
+  mapMarkers.forEach(m=>mapInstance.removeLayer(m));
+  mapMarkers=[];
+  const bounds=[];
+
+  if(mapLayers.deals){
+    deals.filter(d=>d.lat&&d.lng&&d.stage!=='Dead').forEach(d=>{
+      const cl=clients.find(x=>x.id===d.client_id);
+      const marker=L.circleMarker([d.lat,d.lng],{radius:8,fillColor:'#2D7DD2',color:'#fff',weight:2,fillOpacity:0.9}).addTo(mapInstance);
+      marker.bindPopup(`<strong>${d.name}</strong><br>${cl?cl.name+'<br>':''}${d.deal_type||'Sales'} · ${d.stage}${d.value?'<br>$'+Number(d.value).toLocaleString()+(d.deal_type==='Leasing'?'/SF/mo':''):''}`);
+      mapMarkers.push(marker);
+      bounds.push([d.lat,d.lng]);
+    });
+  }
+  if(mapLayers.offmarket){
+    offMarket.filter(o=>o.lat&&o.lng).forEach(o=>{
+      const marker=L.circleMarker([o.lat,o.lng],{radius:8,fillColor:'#C9963A',color:'#fff',weight:2,fillOpacity:0.9}).addTo(mapInstance);
+      marker.bindPopup(`<strong>${o.address}</strong><br>Off Market${o.submarket?' · '+o.submarket:''}${o.size_sf?'<br>'+o.size_sf.toLocaleString()+' SF':''}${o.est_value?'<br>Est. $'+Number(o.est_value).toLocaleString():''}`);
+      mapMarkers.push(marker);
+      bounds.push([o.lat,o.lng]);
+    });
+  }
+  if(mapLayers.leads){
+    leads.filter(l=>l.lat&&l.lng).forEach(l=>{
+      const marker=L.circleMarker([l.lat,l.lng],{radius:8,fillColor:'#1A7F4B',color:'#fff',weight:2,fillOpacity:0.9}).addTo(mapInstance);
+      marker.bindPopup(`<strong>${l.address}</strong><br>Lead${l.owner_name?'<br>Owner: '+l.owner_name:''}`);
+      mapMarkers.push(marker);
+      bounds.push([l.lat,l.lng]);
+    });
+  }
+  if(bounds.length){
+    mapInstance.fitBounds(bounds,{padding:[40,40],maxZoom:14});
+  }
+  const statusEl=document.getElementById('map-status');
+  const totalPlotted=mapMarkers.length;
+  const totalMissing=deals.filter(d=>!d.lat&&d.stage!=='Dead').length+offMarket.filter(o=>!o.lat).length+leads.filter(l=>!l.lat).length;
+  statusEl.textContent=`${totalPlotted} pin${totalPlotted!==1?'s':''} plotted.${totalMissing?' '+totalMissing+' address'+(totalMissing!==1?'es':'')+' not yet geocoded — click "Geocode missing addresses".':''}`;
 }
 
 function closeModal(id){document.getElementById(id).classList.remove('open');}
@@ -2078,7 +2352,7 @@ function download(filename,content){const a=document.createElement('a');a.href=U
 function exportContacts(){const rows=[['Name','Type','Company','Title','Email','Phone','Submarket','Notes']];contacts.forEach(c=>rows.push([c.name,c.type||'',c.company||'',c.title||'',c.email||'',c.phone||'',c.submarket||'',c.notes||'']));download('contacts.csv',toCSV(rows));}
 function exportClients(){const rows=[['Name','Type','Primary Contact','Email','Phone','Notes']];clients.forEach(c=>rows.push([c.name,c.type||'',c.cl_contact||'',c.email||'',c.phone||'',c.notes||'']));download('clients.csv',toCSV(rows));}
 function exportDeals(){const rows=[['Name','Pipeline','Stage','Property Type','Value','Client','Notes']];deals.forEach(d=>{const cl=clients.find(x=>x.id===d.client_id);rows.push([d.name,d.deal_type||'Sales',d.stage,d.type||'',d.value||'',cl?cl.name:'',d.notes||'']);});download('deals.csv',toCSV(rows));}
-function exportLeads(){const rows=[['Address','Owner Name','Owner Email','Owner Phone','Notes','Added']];leads.forEach(l=>rows.push([l.address,l.owner_name||'',l.owner_email||'',l.owner_phone||'',l.notes||'',l.created_at?new Date(l.created_at).toLocaleDateString():'']));download('leads.csv',toCSV(rows));}
+function exportLeads(){const rows=[['Address','Type','Lease/Sale','Size (SF)','Asking','Listing Broker','Date Listed','Status','Last Contact','Owner Name','Owner Email','Owner Phone','Notes','Added']];leads.forEach(l=>rows.push([l.address,l.lead_type||'Owner lead',l.deal_kind||'',l.size_sf||'',l.asking_value||'',l.listing_broker||'',l.date_listed||'',l.status||'Not contacted',l.last_contact||'',l.owner_name||'',l.owner_email||'',l.owner_phone||'',l.notes||'',l.created_at?new Date(l.created_at).toLocaleDateString():'']));download('leads.csv',toCSV(rows));}
 function exportOffMarket(){const rows=[['Address','Submarket','Property Type','Size (SF)','Est. Value','Owner Name','Owner Email','Owner Phone','Last Contact','Notes']];offMarket.forEach(o=>rows.push([o.address,o.submarket||'',o.property_type||'',o.size_sf||'',o.est_value||'',o.owner_name||'',o.owner_email||'',o.owner_phone||'',o.last_contact||'',o.notes||'']));download('off_market.csv',toCSV(rows));}
 function exportCommissions(){const rows=[['Deal','Sale Price','Rate (%)','Split (%)','Gross Comm','Net Comm','Status','Close Date','Notes']];commissions.forEach(c=>{const d=deals.find(x=>x.id===c.deal_id);const gross=c.sale*c.rate/100;const net=gross*(c.split||100)/100;rows.push([d?d.name:'',c.sale,c.rate,c.split||100,Math.round(gross),Math.round(net),c.status,c.close_date||'',c.notes||'']);});download('commissions.csv',toCSV(rows));}
 function exportSaleComps(){const rows=[['Address','Submarket','Type','Size (SF)','Sale Price','Price/SF','Cap Rate','Buyer','Seller','Brokers','Date Closed','Notes']];saleComps.forEach(c=>rows.push([c.address,c.submarket||'',c.property_type||'',c.size_sf||'',c.sale_price||'',c.price_per_sf||'',c.cap_rate||'',c.buyer||'',c.seller||'',c.brokers||'',c.date_closed||'',c.notes||'']));download('sale_comps.csv',toCSV(rows));}
